@@ -90,6 +90,14 @@ dispositivo.
 
 ## Componentes/Tecnologias
 
+### LISTA DE COMPONENTES:
+1. ESP8266
+2. Sensor de digital
+3. Módulo RFID
+4. Cartão RFID
+5. Tela 2.4" touch
+6. Caixa
+
 ### Site
 
 ● Linguagem de Programação: C , JS 
