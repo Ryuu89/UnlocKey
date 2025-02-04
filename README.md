@@ -95,7 +95,7 @@ dispositivo.
 2. Sensor de digital
 3. Módulo RFID
 4. Cartão RFID
-5. Tela 2.4" touch
+5. Tela 2.4" touch - JC2432S028R - ILI9341
 6. Caixa
 
 ### Site
@@ -143,3 +143,4 @@ Vídeo com o resultado -> [Link]
 - Alexandre -> [@AlexandreFardin](https://github.com/AlexandreFardin)
 - Gabriel -> [@gabb-ggs](https://github.com/gabb-ggs)
 - Lilânio -> [@Ryuu89](https://github.com/Ryuu89)
+
