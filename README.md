@@ -30,7 +30,7 @@ mensagens por meio de criptografia baseada em chaves públicas e privadas. O
 sistema utiliza tecnologia NFC para armazenar as chaves privadas de maneira segura,
 sem nunca salvá-las em qualquer banco de dados ou dispositivo.
 
-### ESTRUTURA DO SISTEMA
+### Estrutura de dados
 O site é responsável por:
 
 ● Cadastro e exibição de usuários: Exibe uma lista de usuários cadastrados, com
@@ -60,7 +60,7 @@ apenas pelo destinatário, via caixa.
 A caixa desempenha funções de autenticação, leitura de NFC e decriptografia. Suas
 funcionalidades incluem:
 
-### CADASTRO DE USUÁRIO
+### Cadastro de usuarios
 
 ● Etapas do Cadastro:
 
@@ -71,14 +71,14 @@ correspondente.
 4. O nome do usuário, junto com a chave pública e a impressão digital
 cadastrada, é enviado para o banco de dados do site.
 
-### LOGIN
+### Login
 ● Etapas do Login:
 1. O usuário autentica-se utilizando sua impressão digital previamente
 cadastrada.
 2. Após a autenticação, a caixa verifica a identidade do usuário e acessa as
 mensagens criptografadas associadas a ele no site.
 
-### ACESSO ÀS MENSAGENS 
+### Acesso às mensagens
 ● Etapas de Leitura de Mensagens:
 1. Após o login, o usuário pode visualizar suas mensagens criptografadas.
 2. Para decriptar uma mensagem, o usuário deve aproximar seu tag NFC,
@@ -90,7 +90,7 @@ dispositivo.
 
 ## Componentes/Tecnologias
 
-### LISTA DE COMPONENTES:
+### Lista de componentes:
 1. ESP8266
 2. Sensor de digital
 3. Módulo RFID
