@@ -6,7 +6,7 @@ Repositório para o trabalho desenvolvido na disciplina de PIC1
 - [Conteúdo](#conteúdo)
 - [Resumo](#resumo)
 - [Descrição](#descrição)
-- [Componentes/Materiais](#componentes)
+- [Componentes/Tecnologias](#componentes)
 - [Resultado](#resultado)
 - [Autores](#autores)
 
@@ -88,9 +88,7 @@ localmente e exibi-la ao usuário.
 4. A chave privada nunca é armazenada na caixa ou em qualquer outro
 dispositivo.
 
-## Componentes/Materiais
-ffgfhf
-
+## Componentes/Tecnologias
 
 ### Site
 
