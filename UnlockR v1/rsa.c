@@ -53,39 +53,60 @@ unsigned long MDC(unsigned long a, unsigned long b) {
 
 // Calcula o inverso modular
 unsigned long InversoModular(unsigned long e, unsigned long totient) {
-    long t = 0, newt = 1;
-    long r = totient, newr = e;
+    long t_anterior = 0;
+    long t_atual = 1;
+    long resto_anterior = totient;
+    long resto_atual = e;
 
-    while (newr != 0) {   // algoritmo de Euclides estendido
-        long quotient = r / newr;
-        long temp = t;
-        t = newt;
-        newt = temp - quotient * newt;
+    while (resto_atual != 0) {
+        /*   // algoritmo de Euclides estendido
+        20 em binário = 10100
 
-        temp = r;
-        r = newr;
-        newr = temp - quotient * newr;
+        7^20 = 7^(16 + 4) = 7^16 * 7^4
+
+        Iterações:
+        1. base = 7, exp = 20
+        2. base = 7^2 = 49 ≡ 10 (mod 13), exp = 10
+        3. base = 10^2 = 100 ≡ 9 (mod 13), exp = 5
+        4. base = 9^2 = 81 ≡ 3 (mod 13), exp = 2
+        5. base = 3^2 = 9 (mod 13), exp = 1 */
+
+        long quociente = resto_anterior / resto_atual;
+
+        // Atualiza coeficientes
+        long temp = t_anterior;
+        t_anterior = t_atual;
+        t_atual = temp - quociente * t_atual;
+
+        // Atualiza restos
+        temp = resto_anterior;
+        resto_anterior = resto_atual;
+        resto_atual = temp - (quociente * resto_atual);
     }
 
-    if (r > 1){
-        return 0; // Não há inverso modular
+    // Verifica se existe inverso modular
+    if (resto_anterior > 1) {
+        return 0;  // e não é coprimo com totient
     }
-    if (t < 0){
-        t += totient;
+
+    // Garante que o resultado seja positivo
+    if (t_anterior < 0) {
+        t_anterior += totient;
     }
-    return (unsigned long)t;
+
+    return (unsigned long)t_anterior;
 }
 
 // Calcula (base^exp) % mod de forma eficiente
 unsigned long ExpModular(unsigned long base, unsigned long exp, unsigned long mod){
     unsigned long result = 1;
-    base = base % mod;
+    base = base % mod; // Normaliza a base
     
     while (exp > 0) {
         if (exp % 2 == 1) {
             result = (result * base) % mod;
         }
-        exp = exp >> 1;
+        exp = exp / 2;
         base = (base * base) % mod;
     }
     return result;

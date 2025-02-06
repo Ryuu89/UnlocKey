@@ -94,7 +94,7 @@ void CadastraUsuario(Usuario *usuario) {
         char path[128] = "./Debug/Keys/";
 
         strcat(path, usuario->username);
-        strcat(path, "PrivateKey.txt");
+        strcat(path, "PrivKey.txt");
         fp = fopen(path, "w");
         if (fp != NULL) {
             SalvarChaves(usuario->chavePrivada, NULL, fp);
