@@ -5,11 +5,13 @@
 #include <string.h>
 #include <time.h>
 
+// Struct para armazenar chaves públicas
 struct PublicKeys{
   unsigned long e; // Expoente público
   unsigned long n; // Produto p*q
 };
 
+// Struct para armazenar chaves privadas
 struct PrivateKeys{
   unsigned long d; // Expoente privado
   unsigned long p; // Chave privada primo1
@@ -99,6 +101,9 @@ void InitKeys(PrivateKeys** priv, PublicKeys** pub) {
             (*priv)->d = 0;
             (*priv)->p = 0;
             (*priv)->q = 0;
+        } else {
+            printf("Erro ao alocar memória para chaves privadas.\n");
+            exit(1);
         }
     }
     
@@ -107,6 +112,9 @@ void InitKeys(PrivateKeys** priv, PublicKeys** pub) {
         if (*pub) {
             (*pub)->e = 0;
             (*pub)->n = 0;
+        } else {
+            printf("Erro ao alocar memória para chaves públicas.\n");
+            exit(1);
         }
     }    
 }
@@ -163,6 +171,9 @@ void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, FILE *fp){
     }
     if (pub != NULL){
         fprintf(fp, "%lu %lu", pub->e, pub->n);
+    }
+    if (ferror(fp)) {
+        printf("Erro ao escrever no arquivo.\n");
     }
 }
 

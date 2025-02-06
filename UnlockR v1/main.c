@@ -7,6 +7,7 @@
 #define MAX_MESSAGE_LENGTH 256
 #define MAX_USERNAME_LENGTH 32
 
+// Struct para armazenar mensagens criptografadas
 typedef struct {
     char remetente[MAX_USERNAME_LENGTH];
     char destinatario[MAX_USERNAME_LENGTH];
@@ -14,15 +15,23 @@ typedef struct {
     unsigned int tamanhoMsg;
 } Mensagem;
 
+// Struct para armazenar informações do usuário
 typedef struct {
     char username[MAX_USERNAME_LENGTH];
     PrivateKeys *chavePrivada;
     PublicKeys *chavePublica;
 } Usuario;
 
+// Função para cadastrar um novo usuário
 void CadastraUsuario(Usuario *usuario);
+
+// Função para encontrar um usuário pelo nome
 int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username);
+
+// Função para enviar uma mensagem criptografada
 void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens);
+
+// Função para ler mensagens criptografadas
 void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens);
 
 int main() {
@@ -98,9 +107,10 @@ void CadastraUsuario(Usuario *usuario) {
         fp = fopen(path, "w");
         if (fp != NULL) {
             SalvarChaves(usuario->chavePrivada, NULL, fp);
+            fclose(fp);
+        } else {
+            printf("Erro ao abrir o arquivo %s.\n", path);
         }
-
-        fclose(fp);
     }
 }
 
