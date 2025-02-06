@@ -1,146 +1,74 @@
 # UnlocKey
 
-Repositório para o trabalho desenvolvido na disciplina de PIC1
+## UnlockR v1 Prototype
 
-## Conteúdo
-- [Conteúdo](#conteúdo)
-- [Resumo](#resumo)
-- [Descrição](#descrição)
-- [Componentes/Tecnologias](#componentes)
-- [Resultado](#resultado)
-- [Autores](#autores)
+O `UnlockR v1` é um protótipo em C usado no próprio terminal para testar a biblioteca `rsa.h` que será usada eventualmente no projeto de Arduino na branch main. Ele permite cadastrar usuários, enviar mensagens criptografadas e ler mensagens criptografadas.
 
-## Resumo
-O projeto integra um site para envio de mensagens criptografadas e uma caixa
-física que usa biometria e NFC para autenticação e descriptografia. As chaves
-públicas são geradas na caixa, enquanto as privadas ficam apenas no NFC,
-garantindo segurança e privacidade.
+### Biblioteca `rsa.h`
 
-## Descrição
-O projeto consiste no desenvolvimento de um sistema integrado composto por
-duas principais partes:
+A biblioteca `rsa.h` implementa as funções necessárias para gerar chaves RSA, criptografar e descriptografar mensagens. Ela inclui funções para verificar se um número é primo, gerar números primos, calcular o Máximo Divisor Comum (MDC), calcular o inverso modular, calcular a exponenciação modular, gerenciar memória para as chaves, gerar chaves RSA, mostrar chaves, salvar chaves em um arquivo, ler chaves privadas de um arquivo e criptografar e descriptografar mensagens.
 
-● Um site que funciona como uma plataforma de envio e gerenciamento de
-mensagens criptografadas, semelhante a uma rede social básica.
+### Instruções para rodar o protótipo `UnlockR v1`
 
-● Uma caixa física que realiza autenticação biométrica (sensor de impressão
-digital), leitura de tags NFC para decriptografia, e envio de dados para o site.
-O objetivo principal é garantir a segurança e privacidade no envio e recebimento de
-mensagens por meio de criptografia baseada em chaves públicas e privadas. O
-sistema utiliza tecnologia NFC para armazenar as chaves privadas de maneira segura,
-sem nunca salvá-las em qualquer banco de dados ou dispositivo.
+1. Clone o repositório:
+   ```sh
+   git clone https://github.com/Ryuu89/UnlocKey.git
+   cd UnlocKey
+   ```
 
-### Estrutura de dados
-O site é responsável por:
+2. Compile o código:
+   ```sh
+   cd 'UnlockR v1'
+   gcc -g main.c rsa.c -o main -lm
+   ```
 
-● Cadastro e exibição de usuários: Exibe uma lista de usuários cadastrados, com
-base nos dados enviados pela caixa.
+3. Execute o protótipo:
+   ```sh
+   ./main
+   ```
 
-● Envio de mensagens criptografadas: Permite que os usuários enviem
-mensagens que serão criptografadas usando as chaves públicas dos
-destinatários.
+### Funcionamento do arquivo `rsa.c`
 
-● Armazenamento de dados: Mantém informações como:
+O arquivo `rsa.c` contém a implementação das funções necessárias para o funcionamento do algoritmo RSA. Ele inclui funções para verificar se um número é primo, gerar números primos, calcular o Máximo Divisor Comum (MDC), calcular o inverso modular, calcular a exponenciação modular, gerenciar memória para as chaves, gerar chaves RSA, mostrar chaves, salvar chaves em um arquivo, ler chaves privadas de um arquivo e criptografar e descriptografar mensagens.
 
-- Nome de usuário.
-- Chaves públicas associadas aos usuários.
-- Mensagens criptografadas.
-  
-Funcionamento do Site:
+#### Funções principais:
 
-1. O site recebe as chaves públicas geradas pela caixa, associando-as aos usuários
-cadastrados.
-
-2. Ao enviar uma mensagem, o site verifica o destinatário e utiliza a chave pública
-associada a ele para criptografar a mensagem.
-
-3. As mensagens criptografadas são armazenadas no banco de dados e acessíveis
-apenas pelo destinatário, via caixa.
-
-A caixa desempenha funções de autenticação, leitura de NFC e decriptografia. Suas
-funcionalidades incluem:
-
-### Cadastro de usuarios
-
-● Etapas do Cadastro:
-
-1. O usuário insere sua impressão digital no sensor biométrico.
-2. A caixa lê o tag NFC do usuário para obter a chave privada.
-3. Com base na chave privada, a caixa gera a chave pública
-correspondente.
-4. O nome do usuário, junto com a chave pública e a impressão digital
-cadastrada, é enviado para o banco de dados do site.
-
-### Login
-● Etapas do Login:
-1. O usuário autentica-se utilizando sua impressão digital previamente
-cadastrada.
-2. Após a autenticação, a caixa verifica a identidade do usuário e acessa as
-mensagens criptografadas associadas a ele no site.
-
-### Acesso às mensagens
-● Etapas de Leitura de Mensagens:
-1. Após o login, o usuário pode visualizar suas mensagens criptografadas.
-2. Para decriptar uma mensagem, o usuário deve aproximar seu tag NFC,
-que contém sua chave privada.
-3. A caixa utiliza a chave privada para decriptografar a mensagem
-localmente e exibi-la ao usuário.
-4. A chave privada nunca é armazenada na caixa ou em qualquer outro
-dispositivo.
-
-## Componentes/Tecnologias
-
-### Lista de componentes:
-1. ESP8266
-2. Sensor de digital
-3. Módulo RFID
-4. Cartão RFID
-5. Tela 2.4" touch - JC2432S028R - ILI9341
-6. Caixa
-
-### Site
-
-● Linguagem de Programação: C , JS 
-
-● Banco de Dados: SQLite3 
-
-● Frontend: HTML, CSS, 
-
-### Caixa Física 
-
-● Hardware: 
-
-○ Sensor de impressão digital. 
-
-○ Leitor NFC (compatível com tags ISO 14443).
-
-○ Microprocessador ESP32.
-
-● Linguagem de Programação: C++.
-
-● Comunicação com o site: protocolo MQTT para envio e recebimento de dados.
-Criptografia
-
-● Algoritmo: RSA (Rivest–Shamir–Adleman) para criptografia assimétrica.
-
-○ As chaves privadas (armazenadas em tags NFC) são geradas utilizando
-bibliotecas como:
-
-■ Arduino Cryptography Library
-
-○ As chaves públicas (enviadas ao site) e a descriptografia serão
-calculadas e realizadas durante o processamento feito no próprio código
-do Arduino, usando algoritmos de MDC, função totiente de Euler, inverso
-multiplicativo e potenciação modular.
-
-
-## Resultado
-
-Vídeo com o resultado -> [Link]
-
-## Autores
-
-- Alexandre -> [@AlexandreFardin](https://github.com/AlexandreFardin)
-- Gabriel -> [@gabb-ggs](https://github.com/gabb-ggs)
-- Lilânio -> [@Ryuu89](https://github.com/Ryuu89)
-
+- `EhPrimo`: Verifica se um número é primo.
+  - Entrada: `unsigned long num` - número a ser verificado.
+  - Saída: `int` - retorna 1 se o número for primo, caso contrário, retorna 0.
+- `GeraPrimos`: Gera dois números primos aleatórios.
+  - Entrada: `unsigned long *p, unsigned long *q` - ponteiros para armazenar os números primos gerados.
+  - Saída: Nenhuma.
+- `MDC`: Calcula o Máximo Divisor Comum (MDC).
+  - Entrada: `unsigned long a, unsigned long b` - números para calcular o MDC.
+  - Saída: `unsigned long` - retorna o MDC de `a` e `b`.
+- `InversoModular`: Calcula o inverso modular.
+  - Entrada: `unsigned long e, unsigned long totient` - valores para calcular o inverso modular.
+  - Saída: `unsigned long` - retorna o inverso modular de `e` em relação a `totient`.
+- `ExpModular`: Calcula a exponenciação modular.
+  - Entrada: `unsigned long base, unsigned long exp, unsigned long mod` - valores para calcular a exponenciação modular.
+  - Saída: `unsigned long` - retorna o resultado de `(base^exp) % mod`.
+- `InitKeys`: Inicializa a memória para as chaves.
+  - Entrada: `PrivateKeys** priv, PublicKeys** pub` - ponteiros para as chaves privadas e públicas.
+  - Saída: Nenhuma.
+- `DeleteKeys`: Libera a memória das chaves.
+  - Entrada: `PrivateKeys* priv, PublicKeys* pub` - ponteiros para as chaves privadas e públicas.
+  - Saída: Nenhuma.
+- `GeraChaves`: Gera as chaves RSA.
+  - Entrada: `PrivateKeys* priv, PublicKeys* pub` - ponteiros para as chaves privadas e públicas.
+  - Saída: Nenhuma.
+- `MostraChaves`: Mostra as chaves geradas.
+  - Entrada: `const PrivateKeys* priv, const PublicKeys* pub` - ponteiros para as chaves privadas e públicas.
+  - Saída: Nenhuma.
+- `SalvarChaves`: Salva as chaves em um arquivo.
+  - Entrada: `PrivateKeys *priv, PublicKeys *pub, FILE *fp` - ponteiros para as chaves privadas e públicas e o arquivo.
+  - Saída: Nenhuma.
+- `LerChavesPrivadas`: Lê as chaves privadas de um arquivo.
+  - Entrada: `PrivateKeys* priv, FILE* fp` - ponteiros para as chaves privadas e o arquivo.
+  - Saída: Nenhuma.
+- `EncriptaMensagem`: Criptografa uma mensagem.
+  - Entrada: `const unsigned char* message, unsigned long* encrypted, const PublicKeys* pub` - ponteiros para a mensagem, a mensagem criptografada e as chaves públicas.
+  - Saída: `int` - retorna o tamanho da mensagem criptografada.
+- `DecriptaMensagem`: Descriptografa uma mensagem criptografada.
+  - Entrada: `const unsigned long* encrypted, unsigned int length, unsigned char* message, const PrivateKeys* priv` - ponteiros para a mensagem criptografada, o tamanho da mensagem, a mensagem decriptada e as chaves privadas.
+  - Saída: `int` - retorna 0 se a descriptografia for bem-sucedida.
