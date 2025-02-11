@@ -2,7 +2,7 @@
 #ifndef RSA_H
 #define RSA_H
 
-#include <stdio.h>
+#include <Arduino.h>
 
 typedef struct PublicKeys PublicKeys;
 typedef struct PrivateKeys PrivateKeys;
@@ -22,7 +22,7 @@ void DeleteKeys(PrivateKeys* priv, PublicKeys* pub);
 void GeraChaves(PrivateKeys* priv, PublicKeys* pub);
 void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub);
 void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, FILE *fp);
-void LerChavesPrivadas(PrivateKeys* priv, FILE* fp);
+void LerChavesPrivadas(PrivateKeys* priv, Stream &stream);
 
 // Operacoes de criptografia
 int EncriptaMensagem(const unsigned char* message, unsigned long* encrypted, const PublicKeys* pub);

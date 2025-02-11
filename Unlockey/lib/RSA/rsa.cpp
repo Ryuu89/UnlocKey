@@ -1,19 +1,19 @@
+#include <Arduino.h>
 #include "rsa.h"
 #include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-struct PublicKeys{
-  unsigned long e; // Expoente público
-  unsigned long n; // Produto p*q
+struct PublicKeys {
+    unsigned long e; // Expoente público
+    unsigned long n; // Produto p*q
 };
 
-struct PrivateKeys{
-  unsigned long d; // Expoente privado
-  unsigned long p; // Chave privada primo1
-  unsigned long q; // Chave privada primo2
+struct PrivateKeys {
+    unsigned long d; // Expoente privado
+    unsigned long p; // Chave privada primo1
+    unsigned long q; // Chave privada primo2
 };
 
 // Verifica se um número é primo
@@ -21,9 +21,8 @@ int EhPrimo(unsigned long num) {
     if (num < 2) return 0;
     unsigned long limit = sqrt(num);
     for (unsigned long i = 2; i <= limit; i++) {
-        if (num % i == 0){
-          //printf("%lu divisivel por %lu\n", num, i);
-          return 0;
+        if (num % i == 0) {
+            return 0;
         }
     }
     return 1;
@@ -67,20 +66,20 @@ unsigned long InversoModular(unsigned long e, unsigned long totient) {
         newr = temp - quotient * newr;
     }
 
-    if (r > 1){
+    if (r > 1) {
         return 0; // Não há inverso modular
     }
-    if (t < 0){
+    if (t < 0) {
         t += totient;
     }
     return (unsigned long)t;
 }
 
 // Calcula (base^exp) % mod de forma eficiente
-unsigned long ExpModular(unsigned long base, unsigned long exp, unsigned long mod){
+unsigned long ExpModular(unsigned long base, unsigned long exp, unsigned long mod) {
     unsigned long result = 1;
     base = base % mod;
-    
+
     while (exp > 0) {
         if (exp % 2 == 1) {
             result = (result * base) % mod;
@@ -93,7 +92,7 @@ unsigned long ExpModular(unsigned long base, unsigned long exp, unsigned long mo
 
 // Gerenciamento de Memoria
 void InitKeys(PrivateKeys** priv, PublicKeys** pub) {
-    if (priv){
+    if (priv) {
         *priv = (struct PrivateKeys*) malloc(sizeof(PrivateKeys));
         if (*priv) {
             (*priv)->d = 0;
@@ -101,21 +100,21 @@ void InitKeys(PrivateKeys** priv, PublicKeys** pub) {
             (*priv)->q = 0;
         }
     }
-    
-    if (pub){
+
+    if (pub) {
         *pub = (PublicKeys*) malloc(sizeof(PublicKeys));
         if (*pub) {
             (*pub)->e = 0;
             (*pub)->n = 0;
         }
-    }    
+    }
 }
 
 void DeleteKeys(PrivateKeys* priv, PublicKeys* pub) {
-    if (priv != NULL){
+    if (priv != NULL) {
         free(priv);
     }
-    if (pub != NULL){
+    if (pub != NULL) {
         free(pub);
     }
 }
@@ -138,48 +137,51 @@ void GeraChaves(PrivateKeys *pvkeys, PublicKeys *pbkeys) {
     pvkeys->d = InversoModular(pbkeys->e, totient);
 
     if (pvkeys->d == 0) {
-        printf("Erro ao calcular o inverso modular. Gere novas chaves.\n");
+        Serial.println("Erro ao calcular o inverso modular. Gere novas chaves.");
         exit(1);
     }
 }
 
-void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub){
-    printf("\nChave Pública:\n");
-    printf("\te = %lu | ", pub->e);
-    printf("n = %lu\n", pub->n);
-    printf("Chave Privada:\n");
-    printf("\tp = %lu | ", priv->p);
-    printf("q = %lu | ", priv->q);
-    printf("d = %lu\n", priv->d);
+void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub) {
+    Serial.println("\nChave Pública:");
+    Serial.print("\te = ");
+    Serial.print(pub->e);
+    Serial.print(" | n = ");
+    Serial.println(pub->n);
+    Serial.println("Chave Privada:");
+    Serial.print("\tp = ");
+    Serial.print(priv->p);
+    Serial.print(" | q = ");
+    Serial.print(priv->q);
+    Serial.print(" | d = ");
+    Serial.println(priv->d);
 }
 
-void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, FILE *fp){
-    if (fp == NULL){
-        printf("Arquivo invalido.\n");
-        return;
+void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, Stream &stream) {
+    if (priv != NULL) {
+        stream.print(priv->p);
+        stream.print(" ");
+        stream.print(priv->q);
+        stream.print(" ");
+        stream.println(priv->d);
     }
-    if (priv != NULL){
-        fprintf(fp, "%lu %lu %lu ", priv->p, priv->q, priv->d);
-    }
-    if (pub != NULL){
-        fprintf(fp, "%lu %lu", pub->e, pub->n);
+    if (pub != NULL) {
+        stream.print(pub->e);
+        stream.print(" ");
+        stream.println(pub->n);
     }
 }
 
-void LerChavesPrivadas(PrivateKeys *priv, FILE *fp){
-    if (fp == NULL){
-        printf("Digite as chaves p, q, d, respectivamente: ");
-        scanf("%lu %lu %lu", &priv->p, &priv->q, &priv->d);
-        scanf("%*c");
-    }
-    else{
-        fscanf(fp, "%lu %lu %lu", &priv->p, &priv->q, &priv->d);
-    }
+void LerChavesPrivadas(PrivateKeys *priv, Stream &stream) {
+    if (priv == NULL) return;
+    stream.readBytesUntil(' ', (char*)&priv->p, sizeof(priv->p));
+    stream.readBytesUntil(' ', (char*)&priv->q, sizeof(priv->q));
+    stream.readBytesUntil('\n', (char*)&priv->d, sizeof(priv->d));
 }
 
 // Criptografa uma mensagem caractere por caractere
 int EncriptaMensagem(const unsigned char *message, unsigned long *encrypted, const PublicKeys *pbkeys) {
-    if (!message || !encrypted || !pbkeys){
+    if (!message || !encrypted || !pbkeys) {
         return -1;
     }
 
@@ -193,7 +195,7 @@ int EncriptaMensagem(const unsigned char *message, unsigned long *encrypted, con
 
 // Descriptografa a mensagem criptografada
 int DecriptaMensagem(const unsigned long *encrypted, unsigned int length, unsigned char *message, const PrivateKeys *pvkeys) {
-    if (!message || !encrypted || !pvkeys){
+    if (!message || !encrypted || !pvkeys) {
         return -1;
     }
 
