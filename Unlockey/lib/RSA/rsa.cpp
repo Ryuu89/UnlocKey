@@ -174,9 +174,11 @@ void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, Stream &stream) {
 
 void LerChavesPrivadas(PrivateKeys *priv, Stream &stream) {
     if (priv == NULL) return;
-    stream.readBytesUntil(' ', (char*)&priv->p, sizeof(priv->p));
-    stream.readBytesUntil(' ', (char*)&priv->q, sizeof(priv->q));
-    stream.readBytesUntil('\n', (char*)&priv->d, sizeof(priv->d));
+    
+    priv->p = stream.parseInt();
+    priv->q = stream.parseInt();
+    priv->d = stream.parseInt();
+    if(stream.peek() == '\n') stream.read();
 }
 
 // Criptografa uma mensagem caractere por caractere

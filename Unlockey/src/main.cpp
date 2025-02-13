@@ -1,16 +1,19 @@
 #include <Arduino.h>
 #include "rsa.h"
+#include <SPI.h>
+#include <MFRC522.h>
 
 #define MAX_USERS 5
 #define MAX_MESSAGES 10
-#define MAX_MESSAGE_LENGTH 100
-#define MAX_USERNAME_LENGTH 20
+#define MAX_MESSAGE_LENGTH 50
+#define MAX_USERNAME_LENGTH 15
 
 typedef struct {
     char remetente[MAX_USERNAME_LENGTH];
     char destinatario[MAX_USERNAME_LENGTH];
     unsigned long mensagemCriptografada[MAX_MESSAGE_LENGTH];
     unsigned int tamanhoMsg;
+    char data[17]; // DD/MM/YYYY HH:MM
 } Mensagem;
 
 typedef struct {
@@ -23,30 +26,174 @@ Usuario usuarios[MAX_USERS];
 Mensagem mensagens[MAX_MESSAGES];
 int numUsuarios = 0, numMensagens = 0;
 
-void CadastraUsuario(Usuario *usuario);
-int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username);
-void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens);
-void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens);
+void limpaBufferSerial() {
+    while(Serial.available() > 0) {
+        Serial.read();
+    }
+}
+
+String lerString() {
+    String result = "";
+    while(!Serial.available()) {
+        delay(10);
+    }
+    delay(100);
+    while(Serial.available() > 0) {
+        char c = Serial.read();
+        if(c == '\n' || c == '\r') continue;
+        result += c;
+    }
+    return result;
+}
+
+void setDataAtual(char* data) {
+    strcpy(data, "15/03/2024 10:30");
+}
+
+void CadastraUsuario(Usuario *usuario) {
+    Serial.println("Digite o nome do usuário: ");
+    limpaBufferSerial();
+    String nome = lerString();
+    strncpy(usuario->username, nome.c_str(), MAX_USERNAME_LENGTH - 1);
+    usuario->username[MAX_USERNAME_LENGTH - 1] = '\0';
+    
+    InitKeys(&usuario->chavePrivada, &usuario->chavePublica);
+    GeraChaves(usuario->chavePrivada, usuario->chavePublica);
+    
+    Serial.println("\nChaves geradas para " + String(usuario->username) + ":");
+    MostraChaves(usuario->chavePrivada, usuario->chavePublica);
+    Serial.println("\nIMPORTANTE: Guarde suas chaves privadas!");
+}
+
+int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
+    for (int i = 0; i < numUsuarios; i++) {
+        if (strcmp(usuarios[i].username, username) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens) {
+    Serial.println("Remetente: ");
+    limpaBufferSerial();
+    String remetente = lerString();
+    
+    Serial.println("Destinatário: ");
+    limpaBufferSerial();
+    String destinatario = lerString();
+    
+    int idRemetente = EncontraUsuario(usuarios, numUsuarios, remetente.c_str());
+    int idDestinatario = EncontraUsuario(usuarios, numUsuarios, destinatario.c_str());
+    
+    if (idRemetente == -1 || idDestinatario == -1) {
+        Serial.println("Usuário não encontrado!");
+        return;
+    }
+    
+    Serial.println("Mensagem: ");
+    limpaBufferSerial();
+    String mensagem = lerString();
+    
+    strncpy(mensagens[*numMensagens].remetente, remetente.c_str(), MAX_USERNAME_LENGTH - 1);
+    strncpy(mensagens[*numMensagens].destinatario, destinatario.c_str(), MAX_USERNAME_LENGTH - 1);
+    mensagens[*numMensagens].tamanhoMsg = mensagem.length();
+    
+    setDataAtual(mensagens[*numMensagens].data);
+    
+    EncriptaMensagem((unsigned char*)mensagem.c_str(), 
+                     mensagens[*numMensagens].mensagemCriptografada, 
+                     usuarios[idDestinatario].chavePublica);
+    
+    (*numMensagens)++;
+    Serial.println("Mensagem enviada com sucesso!");
+}
+
+void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens) {
+    Serial.println("\nDigite seu username: ");
+    limpaBufferSerial();
+    String username = lerString();
+    
+    int idUsuario = EncontraUsuario(usuarios, numUsuarios, username.c_str());
+    if (idUsuario == -1) {
+        Serial.println("Usuário não encontrado!");
+        return;
+    }
+    
+    bool temMensagem = false;
+    for (int i = 0; i < numMensagens; i++) {
+        if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
+            temMensagem = true;
+            Serial.print("\n[");
+            Serial.print(mensagens[i].data);
+            Serial.print("] De: ");
+            Serial.println(mensagens[i].remetente);
+            Serial.println("Mensagem criptografada: ");
+            
+            for (unsigned int j = 0; j < mensagens[i].tamanhoMsg; j++) {
+                Serial.write((char)(mensagens[i].mensagemCriptografada[j] % 94 + 33));
+            }
+            Serial.println();
+        }
+    }
+    
+    if (!temMensagem) {
+        Serial.println("Nenhuma mensagem encontrada.");
+        return;
+    }
+
+    Serial.println("\nDeseja descriptografar as mensagens? (1-Sim/0-Não)");
+    limpaBufferSerial();
+    if (Serial.parseInt() == 1) {
+        PrivateKeys *ChavePrivada;
+        InitKeys(&ChavePrivada, NULL);
+        
+        Serial.println("\nDigite as chaves privadas (p q d):");
+        LerChavesPrivadas(ChavePrivada, Serial);
+        
+        Serial.println("\nMensagens descriptografadas:");
+        for (int i = 0; i < numMensagens; i++) {
+            if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
+                unsigned char mensagemDecriptada[MAX_MESSAGE_LENGTH] = {0};
+                DecriptaMensagem(mensagens[i].mensagemCriptografada, 
+                               mensagens[i].tamanhoMsg,
+                               mensagemDecriptada, 
+                               ChavePrivada);
+                
+                Serial.print("[");
+                Serial.print(mensagens[i].data);
+                Serial.print("] De: ");
+                Serial.print(mensagens[i].remetente);
+                Serial.print(" - ");
+                Serial.println((char*)mensagemDecriptada);
+            }
+        }
+        DeleteKeys(ChavePrivada, NULL);
+    }
+}
 
 void setup() {
     Serial.begin(115200);
     while (!Serial) {
-        ; // Aguarda a conexão da porta serial
+        delay(10);
     }
+    Serial.println("\nSistema Inicializado");
 }
 
 void loop() {
-    int opcao;
-    Serial.println("\n1 - Cadastrar usuário");
+    Serial.println("\n=== Menu Principal ===");
+    Serial.println("1 - Cadastrar usuário");
     Serial.println("2 - Enviar mensagem");
     Serial.println("3 - Ler mensagens");
     Serial.println("0 - Sair");
+    Serial.println("==================");
     Serial.print("Opção: ");
     
-    while (Serial.available() == 0) {
-        // Aguarda a entrada do usuário
+    while(!Serial.available()) {
+        delay(10);
     }
-    opcao = Serial.parseInt();
+    int opcao = Serial.parseInt();
+    limpaBufferSerial();
     
     switch(opcao) {
         case 1:
@@ -70,158 +217,16 @@ void loop() {
             break;
             
         case 0:
-            // Cleanup
+            Serial.println("Limpando recursos...");
             for (int i = 0; i < numUsuarios; i++) {
                 DeleteKeys(usuarios[i].chavePrivada, usuarios[i].chavePublica);
             }
-            Serial.println("Saindo...");
-            while (true) {
-                // Para o loop
-            }
+            Serial.println("Programa finalizado.");
+            ESP.restart();
             break;
             
         default:
             Serial.println("Opção inválida!");
             break;
-    }
-}
-
-void CadastraUsuario(Usuario *usuario) {
-    Serial.print("Digite o nome do usuário: ");
-    while (Serial.available() == 0) {
-        // Aguarda a entrada do usuário
-    }
-    Serial.readBytesUntil('\n', usuario->username, MAX_USERNAME_LENGTH);
-    usuario->username[strcspn(usuario->username, "\n")] = '\0';
-    
-    InitKeys(&usuario->chavePrivada, &usuario->chavePublica);
-    GeraChaves(usuario->chavePrivada, usuario->chavePublica);
-    
-    Serial.print("\nChaves geradas para ");
-    Serial.print(usuario->username);
-    Serial.println(":");
-    MostraChaves(usuario->chavePrivada, usuario->chavePublica);
-}
-
-int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
-    for (int i = 0; i < numUsuarios; i++) {
-        if (strcmp(usuarios[i].username, username) == 0) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens) {
-    char remetente[MAX_USERNAME_LENGTH];
-    char destinatario[MAX_USERNAME_LENGTH];
-    unsigned char mensagem[MAX_MESSAGE_LENGTH];
-    
-    Serial.print("Remetente: ");
-    while (Serial.available() == 0) {
-        // Aguarda a entrada do usuário
-    }
-    Serial.readBytesUntil('\n', remetente, MAX_USERNAME_LENGTH);
-    remetente[strcspn(remetente, "\n")] = '\0';
-    
-    Serial.print("Destinatário: ");
-    while (Serial.available() == 0) {
-        // Aguarda a entrada do usuário
-    }
-    Serial.readBytesUntil('\n', destinatario, MAX_USERNAME_LENGTH);
-    destinatario[strcspn(destinatario, "\n")] = '\0';
-    
-    int idRemetente = EncontraUsuario(usuarios, numUsuarios, remetente);
-    int idDestinatario = EncontraUsuario(usuarios, numUsuarios, destinatario);
-    
-    if (idRemetente == -1 || idDestinatario == -1) {
-        Serial.println("Usuário não encontrado!");
-        return;
-    }
-    
-    Serial.print("Mensagem: ");
-    while (Serial.available() == 0) {
-        // Aguarda a entrada do usuário
-    }
-    Serial.readBytesUntil('\n', (char*)mensagem, MAX_MESSAGE_LENGTH);
-    mensagem[strcspn((char*)mensagem, "\n")] = '\0';
-    
-    strcpy(mensagens[*numMensagens].remetente, remetente);
-    strcpy(mensagens[*numMensagens].destinatario, destinatario);
-    mensagens[*numMensagens].tamanhoMsg = strlen((char*)mensagem);
-    
-    EncriptaMensagem(mensagem, mensagens[*numMensagens].mensagemCriptografada, 
-                     usuarios[idDestinatario].chavePublica);
-    
-    (*numMensagens)++;
-}
-
-void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens) {
-    char username[MAX_USERNAME_LENGTH];
-
-    Serial.print("\nDigite seu username para ler as mensagens: ");
-    while (Serial.available() == 0) {
-        // Aguarda a entrada do usuário
-    }
-    Serial.readBytesUntil('\n', username, MAX_USERNAME_LENGTH);
-    username[strcspn(username, "\n")] = '\0';
-    
-    int idUsuario = EncontraUsuario(usuarios, numUsuarios, username);
-    if (idUsuario == -1) {
-        Serial.println("Usuário não encontrado!");
-        return;
-    }
-    
-    Serial.print("\nMensagens para ");
-    Serial.print(username);
-    Serial.println(":");
-    for (int i = 0; i < numMensagens; i++) {
-        if (strcmp(mensagens[i].destinatario, username) == 0) {
-            unsigned char mensagemDecriptada[MAX_MESSAGE_LENGTH];
-            
-            Serial.print("\nDe: ");
-            Serial.print(mensagens[i].remetente);
-            Serial.print("\n\t");
-            for (unsigned int j = 0; j < mensagens[i].tamanhoMsg; j++){
-                Serial.print((char)(mensagens[i].mensagemCriptografada[j] % 94 + 33)); // Converte para caracteres imprimíveis
-            }
-
-            Serial.println("\n\n1 - Digitar chaves manualmente para descriptografar.");
-            Serial.println("2 - Ler chaves de um arquivo.txt para descriptografar.");
-            Serial.println("0 - Sair.");
-
-            int opcao;
-            Serial.print("Opção: ");
-            while (Serial.available() == 0) {
-                // Aguarda a entrada do usuário
-            }
-            opcao = Serial.parseInt();
-            PrivateKeys *ChavePrivada;
-            InitKeys(&ChavePrivada, NULL);
-
-            if (opcao == 1){
-                LerChavesPrivadas(ChavePrivada, Serial);
-            }
-            else if (opcao == 2){
-                // No Arduino, leitura de arquivo não é trivial, então omitimos essa parte
-                Serial.println("Leitura de arquivo não suportada no Arduino.");
-                DeleteKeys(ChavePrivada, NULL);
-                return;
-            }
-            else{
-                Serial.println("Saindo...");
-                DeleteKeys(ChavePrivada, NULL);
-                return;
-            }
-
-            DecriptaMensagem(mensagens[i].mensagemCriptografada, 
-                           mensagens[i].tamanhoMsg,
-                           mensagemDecriptada, 
-                           ChavePrivada);
-            
-            Serial.print("Mensagem decriptada: ");
-            Serial.println((char*)mensagemDecriptada);
-            DeleteKeys(ChavePrivada, NULL);
-        }
     }
 }
