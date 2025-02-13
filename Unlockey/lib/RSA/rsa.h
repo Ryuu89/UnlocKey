@@ -3,6 +3,7 @@
 #define RSA_H
 
 #include <Arduino.h>
+#include <MFRC522.h>
 
 typedef struct PublicKeys PublicKeys;
 typedef struct PrivateKeys PrivateKeys;
@@ -21,8 +22,8 @@ void DeleteKeys(PrivateKeys* priv, PublicKeys* pub);
 // Operacoes com chaves
 void GeraChaves(PrivateKeys* priv, PublicKeys* pub);
 void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub);
-void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, FILE *fp);
-void LerChavesPrivadas(PrivateKeys* priv, Stream &stream);
+void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, MFRC522 *rfid);
+void LerChavesPrivadas(PrivateKeys* priv, MFRC522 *rfid);
 
 // Operacoes de criptografia
 int EncriptaMensagem(const unsigned char* message, unsigned long* encrypted, const PublicKeys* pub);

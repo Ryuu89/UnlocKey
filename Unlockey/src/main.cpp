@@ -8,6 +8,11 @@
 #define MAX_MESSAGE_LENGTH 50
 #define MAX_USERNAME_LENGTH 15
 
+#define SS_PIN 10
+#define RST_PIN 9
+
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
 typedef struct {
     char remetente[MAX_USERNAME_LENGTH];
     char destinatario[MAX_USERNAME_LENGTH];
@@ -18,7 +23,6 @@ typedef struct {
 
 typedef struct {
     char username[MAX_USERNAME_LENGTH];
-    PrivateKeys *chavePrivada;
     PublicKeys *chavePublica;
 } Usuario;
 
@@ -51,18 +55,23 @@ void setDataAtual(char* data) {
 }
 
 void CadastraUsuario(Usuario *usuario) {
+    PrivateKeys *chavePrivada;
     Serial.println("Digite o nome do usuário: ");
     limpaBufferSerial();
     String nome = lerString();
     strncpy(usuario->username, nome.c_str(), MAX_USERNAME_LENGTH - 1);
     usuario->username[MAX_USERNAME_LENGTH - 1] = '\0';
     
-    InitKeys(&usuario->chavePrivada, &usuario->chavePublica);
-    GeraChaves(usuario->chavePrivada, usuario->chavePublica);
+    InitKeys(&chavePrivada, &usuario->chavePublica);
+    GeraChaves(chavePrivada, usuario->chavePublica);
     
     Serial.println("\nChaves geradas para " + String(usuario->username) + ":");
-    MostraChaves(usuario->chavePrivada, usuario->chavePublica);
-    Serial.println("\nIMPORTANTE: Guarde suas chaves privadas!");
+    MostraChaves(chavePrivada, usuario->chavePublica);
+    Serial.println("\nIMPORTANTE: Aproxime a TAG RFID para salvar as chaves privadas!");
+    SalvarChaves(chavePrivada, NULL, &mfrc522);
+    mfrc522.PICC_HaltA();
+    mfrc522.PCD_StopCrypto1();
+    DeleteKeys(chavePrivada, NULL);
 }
 
 int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
@@ -124,10 +133,11 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     for (int i = 0; i < numMensagens; i++) {
         if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
             temMensagem = true;
-            Serial.print("\n[");
+            Serial.print("\nDe: ");
+            Serial.print(mensagens[i].remetente);
+            Serial.print("[");
             Serial.print(mensagens[i].data);
-            Serial.print("] De: ");
-            Serial.println(mensagens[i].remetente);
+            Serial.print("]");
             Serial.println("Mensagem criptografada: ");
             
             for (unsigned int j = 0; j < mensagens[i].tamanhoMsg; j++) {
@@ -145,11 +155,18 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     Serial.println("\nDeseja descriptografar as mensagens? (1-Sim/0-Não)");
     limpaBufferSerial();
     if (Serial.parseInt() == 1) {
+        
         PrivateKeys *ChavePrivada;
         InitKeys(&ChavePrivada, NULL);
         
-        Serial.println("\nDigite as chaves privadas (p q d):");
-        LerChavesPrivadas(ChavePrivada, Serial);
+        Serial.println("Aproxime o cartão RFID para ler a chave privada...");
+        while (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
+            delay(50);
+        }
+
+        LerChavesPrivadas(ChavePrivada, &mfrc522);
+        mfrc522.PICC_HaltA();
+        mfrc522.PCD_StopCrypto1();
         
         Serial.println("\nMensagens descriptografadas:");
         for (int i = 0; i < numMensagens; i++) {
@@ -173,11 +190,9 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
 }
 
 void setup() {
-    Serial.begin(115200);
-    while (!Serial) {
-        delay(10);
-    }
-    Serial.println("\nSistema Inicializado");
+    Serial.begin(9600);
+    SPI.begin();
+    mfrc522.PCD_Init();
 }
 
 void loop() {
@@ -219,7 +234,7 @@ void loop() {
         case 0:
             Serial.println("Limpando recursos...");
             for (int i = 0; i < numUsuarios; i++) {
-                DeleteKeys(usuarios[i].chavePrivada, usuarios[i].chavePublica);
+                DeleteKeys(NULL, usuarios[i].chavePublica);
             }
             Serial.println("Programa finalizado.");
             ESP.restart();

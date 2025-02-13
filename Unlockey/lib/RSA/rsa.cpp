@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <MFRC522.h>
 #include "rsa.h"
 #include <math.h>
 #include <stdlib.h>
@@ -157,28 +158,27 @@ void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub) {
     Serial.println(priv->d);
 }
 
-void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, Stream &stream) {
-    if (priv != NULL) {
-        stream.print(priv->p);
-        stream.print(" ");
-        stream.print(priv->q);
-        stream.print(" ");
-        stream.println(priv->d);
-    }
-    if (pub != NULL) {
-        stream.print(pub->e);
-        stream.print(" ");
-        stream.println(pub->n);
+void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, MFRC522 *rfid) {
+    if (rfid != NULL && priv != NULL) {
+        byte buffer[18];
+        // Salva os campos na ordem: p, q, d
+        memcpy(buffer, &priv->p, sizeof(priv->p));
+        memcpy(buffer + sizeof(priv->p), &priv->q, sizeof(priv->q));
+        memcpy(buffer + sizeof(priv->p) + sizeof(priv->q), &priv->d, sizeof(priv->d));
+        rfid->MIFARE_Write(4, buffer, 16);
     }
 }
 
-void LerChavesPrivadas(PrivateKeys *priv, Stream &stream) {
-    if (priv == NULL) return;
-    
-    priv->p = stream.parseInt();
-    priv->q = stream.parseInt();
-    priv->d = stream.parseInt();
-    if(stream.peek() == '\n') stream.read();
+void LerChavesPrivadas(PrivateKeys* priv, MFRC522 *rfid) {
+    if (rfid != NULL && priv != NULL) {
+        byte buffer[18];
+        byte size = 18;
+        rfid->MIFARE_Read(4, buffer, &size);
+        // Lê os campos na ordem: p, q, d
+        memcpy(&priv->p, buffer, sizeof(priv->p));
+        memcpy(&priv->q, buffer + sizeof(priv->p), sizeof(priv->q));
+        memcpy(&priv->d, buffer + sizeof(priv->p) + sizeof(priv->q), sizeof(priv->d));
+    }
 }
 
 // Criptografa uma mensagem caractere por caractere
