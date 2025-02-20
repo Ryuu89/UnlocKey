@@ -6,9 +6,9 @@
 #define MAX_USERS 5
 #define MAX_MESSAGES 10
 #define MAX_MESSAGE_LENGTH 50
-#define MAX_USERNAME_LENGTH 15
+#define MAX_USERNAME_LENGTH 15  
 
-#define SS_PIN  5
+#define SS_PIN  21
 #define RST_PIN 22
 #define SCK_PIN 18
 #define MISO_PIN 19
@@ -106,7 +106,7 @@ void CadastraUsuario(Usuario *usuario) {
     InitKeys(&chavePrivada, &usuario->chavePublica);
     GeraChaves(chavePrivada, usuario->chavePublica);
     
-    Serial.println("\nChaves geradas para " + String(usuario->username) + ":");
+    Serial.print("\nChaves geradas para " + String(usuario->username) + ":");
     MostraChaves(chavePrivada, usuario->chavePublica);
     Serial.println("\nIMPORTANTE: Aproxime a TAG RFID para salvar as chaves privadas!");
 
@@ -154,11 +154,21 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
     Serial.println("Mensagem: ");
     LimpaBufferSerial();
     String mensagem = LerString();
+
+    // Trunca a mensagem se for maior que o limite
+    if (mensagem.length() > MAX_MESSAGE_LENGTH) {
+        mensagem.remove(MAX_MESSAGE_LENGTH);
+    }
     
+    // Copia remetente/destinatario com segurança
     strncpy(mensagens[*numMensagens].remetente, remetente.c_str(), MAX_USERNAME_LENGTH - 1);
-    strncpy(mensagens[*numMensagens].destinatario, destinatario.c_str(), MAX_USERNAME_LENGTH - 1);
-    mensagens[*numMensagens].tamanhoMsg = mensagem.length();
+    mensagens[*numMensagens].remetente[MAX_USERNAME_LENGTH - 1] = '\0';
     
+    strncpy(mensagens[*numMensagens].destinatario, destinatario.c_str(), MAX_USERNAME_LENGTH - 1);
+    mensagens[*numMensagens].destinatario[MAX_USERNAME_LENGTH - 1] = '\0';
+
+    // Guarda tamanho real da mensagem
+    mensagens[*numMensagens].tamanhoMsg = mensagem.length();
     SetDataAtual(mensagens[*numMensagens].data);
     
     EncriptaMensagem((unsigned char*)mensagem.c_str(), 
@@ -186,10 +196,9 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
             temMensagem = true;
             Serial.print("\nDe: ");
             Serial.print(mensagens[i].remetente);
-            Serial.print("[");
+            Serial.print(" [");
             Serial.print(mensagens[i].data);
-            Serial.print("]");
-            Serial.println("Mensagem criptografada: ");
+            Serial.print("]\n\t");
             
             for (unsigned int j = 0; j < mensagens[i].tamanhoMsg; j++) {
                 Serial.write((char)(mensagens[i].mensagemCriptografada[j] % 94 + 33));
@@ -205,30 +214,72 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
 
     Serial.println("\nDeseja descriptografar as mensagens? (1-Sim/0-Não)");
     LimpaBufferSerial();
-    if (Serial.parseInt() == 1) {
+    while (!Serial.available()) {
+        delay(10);
+    }
+    // Lê o valor como string e converte para int
+    String resposta = LerString();
+    int opc = resposta.toInt();
+
+    if (opc == 1) {
         PrivateKeys *ChavePrivada;
         InitKeys(&ChavePrivada, NULL);
         
         Serial.println("Aproxime o cartão RFID para ler a chave privada...");
         if (AguardaLeituraRFID()) {
-            LerChavesPrivadas(ChavePrivada, &mfrc522);
-            Serial.println("\nMensagens descriptografadas:");
-            for (int i = 0; i < numMensagens; i++) {
-                if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
-                    unsigned char mensagemDecriptada[MAX_MESSAGE_LENGTH] = {0};
-                    DecriptaMensagem(mensagens[i].mensagemCriptografada, 
-                                mensagens[i].tamanhoMsg,
-                                mensagemDecriptada, 
-                                ChavePrivada);
-                    
-                    Serial.print("[");
-                    Serial.print(mensagens[i].data);
-                    Serial.print("] De: ");
-                    Serial.print(mensagens[i].remetente);
-                    Serial.print(" - ");
-                    Serial.println((char*)mensagemDecriptada);
+            if (!LerChavesPrivadas(ChavePrivada, &mfrc522)) {
+                Serial.println("Erro ao ler chaves do cartão!");
+                DeleteKeys(ChavePrivada, NULL);
+                return;
+            }
+
+            if (DEBUG) {
+                // Print encrypted message details without exposing keys
+                Serial.println("\nDetalhes da mensagem criptografada:");
+                for (int i = 0; i < numMensagens; i++) {
+                    if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
+                        Serial.printf("Mensagem de %s:\n", mensagens[i].remetente);
+                        Serial.printf("Tamanho: %d bytes\n", mensagens[i].tamanhoMsg);
+                        Serial.printf("Chaves privadas: ");
+                        MostraChaves(ChavePrivada, NULL);
+                    }
                 }
             }
+
+            Serial.println("\nMensagens descriptografadas:");
+            bool algumSucesso = false;
+            
+            for (int i = 0; i < numMensagens; i++) {
+                if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
+                    unsigned char mensagemDecriptada[MAX_MESSAGE_LENGTH + 1] = {0};
+                    
+                    if (DecriptaMensagem(mensagens[i].mensagemCriptografada, 
+                        mensagens[i].tamanhoMsg, mensagemDecriptada, ChavePrivada)) {
+                        
+                        algumSucesso = true;
+                        Serial.print("\nDe: ");
+                        Serial.print(mensagens[i].remetente);
+                        Serial.print(" [");
+                        Serial.print(mensagens[i].data);
+                        Serial.print("]\n\t");
+                        Serial.println((char*)mensagemDecriptada);
+                    } else {
+                        if (DEBUG) {
+                            Serial.println("Falha na descriptografia. Verificando valores:");
+                            Serial.print("Remetente: ");
+                            Serial.println(mensagens[i].remetente);
+                            Serial.print("Tamanho da mensagem: ");
+                            Serial.println(mensagens[i].tamanhoMsg);
+                        }
+                    }
+                }
+            }
+
+            if (!algumSucesso) {
+                Serial.println("Nenhuma mensagem foi descriptografada com sucesso.");
+                Serial.println("Verifique se o cartão RFID contém as chaves corretas.");
+            }
+
             mfrc522.PICC_HaltA();
             mfrc522.PCD_StopCrypto1();
         }
@@ -242,51 +293,11 @@ void setup() {
     delay(1000);
 
     Serial.println("\n\n=== Iniciando Sistema RFID ===");
-
-    // Pin Configuration
-    pinMode(MOSI_PIN, OUTPUT);
-    pinMode(MISO_PIN, INPUT_PULLUP); // Enable pull-up on MISO
-    pinMode(SCK_PIN, OUTPUT);
-    pinMode(SS_PIN, OUTPUT);
-    pinMode(RST_PIN, OUTPUT);
-
-    // Hardware Reset Sequence
-    Serial.println("Realizando reset do hardware...");
-    digitalWrite(RST_PIN, LOW);  // Assert reset
-    delay(100);
-    digitalWrite(RST_PIN, HIGH); // Release reset
-    delay(100);
-
-    // Initialize SPI
-    Serial.println("Iniciando SPI...");
-    SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
-    SPI.beginTransaction(SPISettings(100000, MSBFIRST, SPI_MODE3));
+    SPI.begin();
 
     // Initialize MFRC522
     Serial.println("Iniciando MFRC522...");
     mfrc522.PCD_Init();
-    delay(50);
-
-    // Read Version Register (Verify MFRC522 is responding)
-    byte version = mfrc522.PCD_ReadRegister(mfrc522.VersionReg);
-
-    if (version == 0x00 || version == 0xFF) {
-        Serial.println("\nERRO CRÍTICO: MFRC522 não respondeu!");
-        Serial.println("Possíveis causas:");
-        Serial.println("1. Conexões incorretas (verifique MOSI, MISO, SCK, SS)");
-        Serial.println("2. Módulo MFRC522 com defeito");
-        Serial.println("3. Problemas de alimentação (tensão instável)");
-        while (1) {
-            delay(5000);
-        }
-    }
-
-    // Configure RFID settings
-    mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
-    mfrc522.PCD_WriteRegister(mfrc522.TxControlReg, 0x83);
-
-    Serial.println("\nSistema RFID inicializado com sucesso!");
-    Serial.printf("Versão do chip: 0x%02X\n", version);
     Serial.println("===================================\n");
 }
 

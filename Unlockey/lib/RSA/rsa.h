@@ -22,8 +22,8 @@ void DeleteKeys(PrivateKeys* priv, PublicKeys* pub);
 // Operacoes com chaves
 void GeraChaves(PrivateKeys* priv, PublicKeys* pub);
 void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub);
-void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, MFRC522 *rfid);
-void LerChavesPrivadas(PrivateKeys* priv, MFRC522 *rfid);
+int SalvarChaves(PrivateKeys *priv, PublicKeys *pub, MFRC522 *rfid);
+int LerChavesPrivadas(PrivateKeys* priv, MFRC522 *rfid);
 
 // Operacoes de criptografia
 int EncriptaMensagem(const unsigned char* message, unsigned long* encrypted, const PublicKeys* pub);

@@ -144,41 +144,104 @@ void GeraChaves(PrivateKeys *pvkeys, PublicKeys *pbkeys) {
 }
 
 void MostraChaves(const PrivateKeys* priv, const PublicKeys* pub) {
-    Serial.println("\nChave Pública:");
-    Serial.print("\te = ");
-    Serial.print(pub->e);
-    Serial.print(" | n = ");
-    Serial.println(pub->n);
-    Serial.println("Chave Privada:");
-    Serial.print("\tp = ");
-    Serial.print(priv->p);
-    Serial.print(" | q = ");
-    Serial.print(priv->q);
-    Serial.print(" | d = ");
-    Serial.println(priv->d);
-}
-
-void SalvarChaves(PrivateKeys *priv, PublicKeys *pub, MFRC522 *rfid) {
-    if (rfid != NULL && priv != NULL) {
-        byte buffer[18];
-        // Salva os campos na ordem: p, q, d
-        memcpy(buffer, &priv->p, sizeof(priv->p));
-        memcpy(buffer + sizeof(priv->p), &priv->q, sizeof(priv->q));
-        memcpy(buffer + sizeof(priv->p) + sizeof(priv->q), &priv->d, sizeof(priv->d));
-        rfid->MIFARE_Write(4, buffer, 16);
+    if (pub){
+        Serial.println("\nChave Pública:");
+        Serial.print("\te = ");
+        Serial.print(pub->e);
+        Serial.print(" | n = ");
+        Serial.println(pub->n);
+    }
+    if (priv){
+        Serial.println("Chave Privada:");
+        Serial.print("\tp = ");
+        Serial.print(priv->p);
+        Serial.print(" | q = ");
+        Serial.print(priv->q);
+        Serial.print(" | d = ");
+        Serial.println(priv->d);
     }
 }
 
-void LerChavesPrivadas(PrivateKeys* priv, MFRC522 *rfid) {
-    if (rfid != NULL && priv != NULL) {
-        byte buffer[18];
-        byte size = 18;
-        rfid->MIFARE_Read(4, buffer, &size);
-        // Lê os campos na ordem: p, q, d
-        memcpy(&priv->p, buffer, sizeof(priv->p));
-        memcpy(&priv->q, buffer + sizeof(priv->p), sizeof(priv->q));
-        memcpy(&priv->d, buffer + sizeof(priv->p) + sizeof(priv->q), sizeof(priv->d));
+int SalvarChaves(PrivateKeys *priv, PublicKeys *pub, MFRC522 *rfid) {
+    if (rfid == NULL || priv == NULL) {
+        return 0;
     }
+
+    MFRC522::MIFARE_Key key;
+    for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
+
+    byte block = 4;
+    byte trailerBlock = 7;
+    MFRC522::StatusCode status;
+
+    // Authenticate first
+    status = rfid->PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(rfid->uid));
+    if (status != MFRC522::STATUS_OK) {
+        Serial.println(F("Falha na autenticação"));
+        return 0;
+    }
+
+    // Create aligned buffer and write values carefully
+    byte buffer[16] = {0}; // Initialize with zeros
+    uint32_t values[3] = {priv->p, priv->q, priv->d};
+    
+    for (int i = 0; i < 3; i++) {
+        buffer[i*4]   = (values[i] >> 24) & 0xFF;
+        buffer[i*4+1] = (values[i] >> 16) & 0xFF;
+        buffer[i*4+2] = (values[i] >> 8) & 0xFF;
+        buffer[i*4+3] = values[i] & 0xFF;
+    }
+
+    status = rfid->MIFARE_Write(block, buffer, 16);
+    if (status != MFRC522::STATUS_OK) {
+        Serial.println(F("Falha ao escrever"));
+        return 0;
+    }
+
+    return 1;
+}
+
+int LerChavesPrivadas(PrivateKeys* priv, MFRC522 *rfid) {
+    if (rfid == NULL || priv == NULL) {
+        return 0;
+    }
+
+    MFRC522::MIFARE_Key key;
+    for (byte i = 0; i < 6; i++) key.keyByte[i] = 0xFF;
+
+    byte block = 4;
+    byte trailerBlock = 7;
+    MFRC522::StatusCode status;
+
+    status = rfid->PCD_Authenticate(MFRC522::PICC_CMD_MF_AUTH_KEY_A, trailerBlock, &key, &(rfid->uid));
+    if (status != MFRC522::STATUS_OK) {
+        Serial.println(F("Falha na autenticação"));
+        return 0;
+    }
+
+    byte buffer[18] = {0};
+    byte size = sizeof(buffer);
+
+    status = rfid->MIFARE_Read(block, buffer, &size);
+    if (status != MFRC522::STATUS_OK) {
+        Serial.println(F("Falha na leitura"));
+        return 0;
+    }
+
+    // Read values carefully byte by byte
+    uint32_t values[3] = {0};
+    for (int i = 0; i < 3; i++) {
+        values[i] = ((uint32_t)buffer[i*4] << 24) |
+                   ((uint32_t)buffer[i*4+1] << 16) |
+                   ((uint32_t)buffer[i*4+2] << 8) |
+                   ((uint32_t)buffer[i*4+3]);
+    }
+
+    priv->p = values[0];
+    priv->q = values[1];
+    priv->d = values[2];
+
+    return 1;
 }
 
 // Criptografa uma mensagem caractere por caractere
@@ -198,7 +261,7 @@ int EncriptaMensagem(const unsigned char *message, unsigned long *encrypted, con
 // Descriptografa a mensagem criptografada
 int DecriptaMensagem(const unsigned long *encrypted, unsigned int length, unsigned char *message, const PrivateKeys *pvkeys) {
     if (!message || !encrypted || !pvkeys) {
-        return -1;
+        return 0;
     }
 
     for (unsigned int i = 0; i < length; i++) {
@@ -207,5 +270,5 @@ int DecriptaMensagem(const unsigned long *encrypted, unsigned int length, unsign
     }
     message[length] = '\0'; // Adiciona o terminador nulo
 
-    return 0;
+    return 1;
 }
