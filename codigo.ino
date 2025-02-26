@@ -1,35 +1,17 @@
+/*
+DEFINED PINS FOR ILI9341: --> LOOK TO USER_SETUP.H FILE IN TFT_ESPI LIBRARY
+TFT_MISO  19  // SPI MISO
+TFT_MOSI  23  // SPI MOSI
+TFT_SCLK  18  // SPI Clock
+TFT_CS    5   // Chip Select
+TFT_DC    21  // Data/Command
+TFT_RST   22  // Reset 
+*/
 
-//  ESP8266_ILI9341_Adafruit_Bodmers_clock
-//
-// Interfacing ESP8266 NodeMCU with ILI9341 TFT display (240x320 pixel).
-// clock is adaptation of Bodmer's Clock example in the TFT_eSPI librray 
-//
-//
-// pins: TFT SPI ILI9341 to ESP8266 NodeMCU
-// VCC       ------------     VCC  - note- wemos - 5V
-// GND       ------------     GND 
-// CS        ------------     D2
-// RST       ------------     D3
-// D/C       ------------     D4
-// MOSI      ------------     D7  
-// SCK       ------------     D5       
-// BL        ------------     VCC - wnote - emos 5V
-//
-// open source - thanks to all contributors
- 
-   #include <Adafruit_GFX.h>                                                    // include Adafruit graphics library
-   #include <Adafruit_ILI9341.h>                                                // include Adafruit ILI9341 TFT library
- 
-   #define TFT_CS    D2                                                         // TFT CS  pin is connected to NodeMCU pin D2
-   #define TFT_RST   D3                                                         // TFT RST pin is connected to NodeMCU pin D3
-   #define TFT_DC    D4                                                         // TFT DC  pin is connected to NodeMCU pin D4
-
-// SCK (CLK) ---> NodeMCU pin D5 (GPIO14)
-// MOSI(DIN) ---> NodeMCU pin D7 (GPIO13)
-
-   Adafruit_ILI9341 tft = Adafruit_ILI9341(TFT_CS, TFT_DC, TFT_RST);
-   int 
-// define some RGB 585 colors
+   #include <TFT_eSPI.h>  // Include the TFT_eSPI library
+   #include <Ui_defines.h>
+   #include <icons.h>
+   // define some RGB 585 colors
    #define BLACK    0x0000
    #define WHITE    0xFFFF
    #define RED      0xF800
@@ -38,16 +20,69 @@
    #define MAGENTA  0xF81F
    #define ORANGE   0xFBE0
    #define GREY     0x5AEB
- 
+//  UI DEFINES
+   #define MAINSCREEN 0
+
+   TFT_eSPI tft = TFT_eSPI();
+   //TIME-RELATED VARIABLES --> ALL PARAMETERS KEEP IN MILLISECONDS
+   int ui_thresholdTimer;
+   int ui_thresholdPast;
+   int global_thresholdTimer;
+   int global_thresholdPast;
+   //UI-RELATED VARIABLES
+   int ui_init = 0; //designed to be used as a flag to initialize the UI when the function to page run for the first time
+   int step = 0;
+   int actualPage;
+
 void setup() {
   tft.begin();
- 
+  tft.setCursor(0,0);
 }
-void loadingScreen();
+void loadingScreen(){
+   if(ui_init == 0){
+      tft.fillScreen(BLACK);
+      tft.setCursor(PAGE_1_CENTER_X, PAGE_1_CENTER_Y);
+      tft.setTextColor(WHITE);
+      tft.setTextSize(2);
+      tft.println("UNLOCKEY");
+      ui_init = 1;
+   }
+   if(step == 0){
+      tft.fillrect(PAGE_1_LEFTCORNER_X, PAGE_1_LEFTCORNER_Y, PAGE_1_RECT_WIDHT, PAGE_1_RECT_HEIGHT, PAGE_1_RECT_COLOR);
+   }
+   if(step == 1){
+      tft.fillrect(PAGE_1_LEFTCORNER_X + PAGE_1_RECT_SPACING, PAGE_1_LEFTCORNER_Y, PAGE_1_RECT_WIDHT, PAGE_1_RECT_HEIGHT, PAGE_1_RECT_COLOR);
+   } 
+   if(step == 2){
+      tft.fillrect(PAGE_1_LEFTCORNER_X + 2*PAGE_1_RECT_SPACING, PAGE_1_LEFTCORNER_Y, PAGE_1_RECT_WIDHT, PAGE_1_RECT_HEIGHT, PAGE_1_RECT_COLOR);
+   }
+   if(step == 3){
+      tft.fillrect(PAGE_1_LEFTCORNER_X + 3*PAGE_1_RECT_SPACING, PAGE_1_LEFTCORNER_Y, PAGE_1_RECT_WIDHT, PAGE_1_RECT_HEIGHT, PAGE_1_RECT_COLOR);
+   }
+      
+}
+
+void mainUi(){
+
+}
 void graphicEngine(int page, int parameter){
    //PAGE 1: LOADING SCREEN
+   switch(page){
+         case 1:
+            loadingScreen();
+            break;
+         case 2:
+            mainUi();
+            break;
+   }
 }
-void loop(void) {
+void loop() {
+   actualPage = 1;
+//loop() is resposible to reset temporary io_trehsoldPast, ui_init and global_thresholdPast when graphic engine is called with another page
+thresholdTimer = millis();
+graphicEngine(actualPage, 0);
 
+
+timeThreshold();
 
 }
