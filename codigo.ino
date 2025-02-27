@@ -97,7 +97,7 @@ uint16_t color = PAGE_2_RFID_COLOR;
 // Drawing selection area
 tft.fillRoundRect(PAGE_2_DEFAULT_SELECTIONAREA_X, PAGE_2_RFID_SELECTIONAREA_Y,PAGE_2_SELECTIONAREA_WIDTH, PAGE_2_SELECTIONAREA_HEIGHT, PAGE_2_SELECTIONAREA_CORNER_RADIUS, PAGE_2_SELECTIONAREA_COLOR);
 //tft.setCursor(PAGE_2_DEFAULT_SELECTIONAREA_X + PAGE_2_SELECTIONAREA_TEXT_SPACING_X, (int)((PAGE_2_SELECTIONAREA_WIDTH/2) + PAGE_2_RFID_SELECTIONAREA_Y));
-tft.setCursor(PAGE_2_DEFAULT_SELECTIONAREA_X + PAGE_2_SELECTIONAREA_TEXT_SPACING_X, 80);
+tft.setCursor(PAGE_2_DEFAULT_SELECTIONAREA_X + PAGE_2_SELECTIONAREA_TEXT_SPACING_X, (int)(PAGE_2_RFID_SELECTIONAREA_Y + 20));
 tft.setTextColor(PAGE_2_SELECTIONAREA_TEXT_COLOR);
 tft.setTextSize(PAGE_2_SELECTIONAREA_TEXT_SIZE);
 tft.println("Cadastrar");
@@ -122,6 +122,13 @@ int y = PAGE_2_MESSAGEICON_LEFTCORNER_Y;
 uint16_t color = PAGE_2_MESSAGEICON_COLOR;
 int size = PAGE_2_MESSAGEICON_SIZE;
 int radius = size / 5;  // Corner roundness
+// Drawing selection area
+tft.fillRoundRect(PAGE_2_DEFAULT_SELECTIONAREA_X, PAGE_2_MESSAGE_SELECTIONAREA_Y, PAGE_2_SELECTIONAREA_WIDTH, PAGE_2_SELECTIONAREA_HEIGHT, PAGE_2_SELECTIONAREA_CORNER_RADIUS, PAGE_2_SELECTIONAREA_COLOR);
+//tft.setCursor(PAGE_2_DEFAULT_SELECTIONAREA_X + PAGE_2_SELECTIONAREA_TEXT_SPACING_X, (int)((PAGE_2_SELECTIONAREA_WIDTH/2) + PAGE_2_RFID_SELECTIONAREA_Y));
+tft.setCursor(PAGE_2_DEFAULT_SELECTIONAREA_X + PAGE_2_SELECTIONAREA_TEXT_SPACING_X, (int)(PAGE_2_MESSAGE_SELECTIONAREA_Y + 20));
+tft.setTextColor(PAGE_2_SELECTIONAREA_TEXT_COLOR);
+tft.setTextSize(PAGE_2_SELECTIONAREA_TEXT_SIZE);
+tft.println("Ler mensagem");
 
 // Draw the filled rounded rectangle
 tft.fillRoundRect(x, y, size, size, radius, color);
@@ -137,7 +144,30 @@ for (int i = 1; i <= 4; i++) {
  tft.drawLine(x + text_margin, lineY, x + text_margin + line_length, lineY, TFT_WHITE);
 }
 }
+void drawReadRFID(){ //PAGE 3
+tft.drawRoundRect(PAGE_3_RECTANGLE_LEFTCORNER_X, PAGE_3_RECTANGLE_LEFTCORNER_Y, PAGE_3_RECTANGLE_WIDTH, PAGE_3_RECTANGLE_HEIGHT, PAGE_3_RECTANGLE_RADIUS, PAGE_3_RECTANGLE_COLOR);
+tft.setCursor();
+//Drawing Icons
+int x = PAGE_3_RFID_CENTER_X;
+int y = PAGE_3_RFID_CENTER_Y;
+int size = PAGE_3_RFID_SIZE;
+uint16_t color = PAGE_3_RFID_COLOR;
 
+ tft.drawRect(x, y, size, size * 0.6, color);
+
+// Convert float to integer for Y position
+int y_center = y + (size * 3) / 10;  // Equivalent to y + size * 0.3
+
+// Draw RFID signal waves
+for (int i = 0; i < 3; i++) {
+ int waveOffset = 5 + (i * 5);  // Adjust spacing for each wave
+ tft.drawArc(x + size + 10, y_center, waveOffset, waveOffset + 3, 240, 300, color, TFT_BLACK, false);
+}
+
+// Draw small rectangle to represent RFID chip area
+tft.fillRect(x + size / 4, y + size / 3, size / 4, size / 6, color);
+
+}
 void update_timers(){
 global_thresholdTimer = millis();
 ui_thresholdTimer = millis();
@@ -200,7 +230,10 @@ if(ui_init == 0){
 
 }
 void loop() {
-page_controller();
+delay(1000);
+tft.fillScreen(BLACK);
+drawReadRFID();
+//page_controller();
 //Serial.println("actualPage status is:");
 update_timers();
 if(ui_thresholdTimer > 15000 ){
