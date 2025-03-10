@@ -2,10 +2,17 @@
 #include "rsa.h"
 #include <SPI.h>
 #include <MFRC522.h>
+#include <time.h>
+
+// Bibliotecas para servidor web
+#include <WiFi.h>
+#include <WebServer.h>
+#include <ESPmDNS.h>
+#include <SPIFFS.h>
 
 #define MAX_USERS 5
 #define MAX_MESSAGES 10
-#define MAX_MESSAGE_LENGTH 50
+#define MAX_MESSAGE_LENGTH 100
 #define MAX_USERNAME_LENGTH 15  
 
 #define SS_PIN  21
@@ -14,8 +21,17 @@
 #define MISO_PIN 19
 #define MOSI_PIN 23
 
-#define DEBUG true
+#ifdef DEBUG
+  #undef DEBUG
+#endif
+#define DEBUG_ON 1
 
+const char *ssid = "SuaRedeWiFi";
+const char *password = "SuaSenha";
+const long gmtOffset_sec = -3 * 3600; // UTC-3;
+const int daylightOffset_sec = 0; // config horário de verão
+
+WebServer server(80);
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 typedef struct {
@@ -34,6 +50,10 @@ typedef struct {
 Usuario usuarios[MAX_USERS];
 Mensagem mensagens[MAX_MESSAGES];
 int numUsuarios = 0, numMensagens = 0;
+String webRemetente;
+String webDestinatario;
+String webMensagem; 
+bool novaMensagemWeb = false;
 
 void LimpaBufferSerial() {
     while(Serial.available() > 0) {
@@ -56,23 +76,28 @@ String LerString() {
 }
 
 void SetDataAtual(char* data) {
-    strcpy(data, "15/03/2024 10:30");
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        strcpy(data, "??/??/???? 00:00");
+        return;
+    }
+    strftime(data, 17, "%d/%m/%Y %H:%M", &timeinfo);
 }
 
 int AguardaLeituraRFID() {
-    Serial.println("Aguardando cartão RFID...");
+    Serial.println(F("Aguardando cartão RFID..."));
     unsigned long tempoInicio = millis();
-    const unsigned long TIMEOUT = 10000; // 10 segundos de timeout
+    const unsigned int TIMEOUT = 20000; // 20 segundos de timeout
     
     while (millis() - tempoInicio < TIMEOUT) {
         if (!mfrc522.PICC_IsNewCardPresent()) {
             delay(50);
             continue;
         }
-        Serial.println("Cartão detectado!");
+        Serial.println(F("Cartão detectado!"));
 
         if (!mfrc522.PICC_ReadCardSerial()) {
-            Serial.println("Falha na leitura do cartão");
+            Serial.println(F("Falha na leitura do cartão"));
             continue;
         }
 
@@ -85,18 +110,18 @@ int AguardaLeituraRFID() {
         
         return 1;
     }
-    Serial.println("Tempo esgotado! Nenhum cartão detectado.");
+    Serial.println(F("Tempo esgotado! Nenhum cartão detectado."));
     return 0;
 }
 
 void CadastraUsuario(Usuario *usuario) {
     PrivateKeys *chavePrivada;
-    Serial.println("Digite o nome do usuário: ");
+    Serial.println(F("Digite o nome do usuário: "));
     LimpaBufferSerial();
     String nome = LerString();
 
     if (nome.length() == 0) {
-        Serial.println("Nome não pode ser vazio!");
+        Serial.println(F("Nome não pode ser vazio!"));
         return;
     }
 
@@ -108,15 +133,22 @@ void CadastraUsuario(Usuario *usuario) {
     
     Serial.print("\nChaves geradas para " + String(usuario->username) + ":");
     MostraChaves(chavePrivada, usuario->chavePublica);
-    Serial.println("\nIMPORTANTE: Aproxime a TAG RFID para salvar as chaves privadas!");
+    Serial.println(F("\nIMPORTANTE: Aproxime a TAG RFID para salvar as chaves privadas!"));
 
     if (AguardaLeituraRFID()) {
-        SalvarChaves(chavePrivada, NULL, &mfrc522);
-        Serial.println("Chaves salvas com sucesso!");
+        if (SalvarChaves(chavePrivada, NULL, &mfrc522)) {
+            Serial.println(F("Chaves salvas com sucesso!"));
+        } else {
+            Serial.println(F("ERRO: Falha ao salvar chaves no cartão!"));
+            Serial.println(F("O usuário foi cadastrado mas as chaves privadas não foram salvas."));
+            Serial.println(F("Por favor, tente novamente com outro cartão RFID."));
+        }
         mfrc522.PICC_HaltA();
         mfrc522.PCD_StopCrypto1();
+    } else {
+        Serial.println(F("Nenhum cartão RFID detectado no tempo limite."));
+        Serial.println(F("O usuário foi cadastrado mas as chaves privadas não foram salvas."));
     }
-
     DeleteKeys(chavePrivada, NULL);
 }
 
@@ -130,16 +162,16 @@ int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
 }
 
 void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens) {
-    Serial.println("Remetente: ");
+    Serial.println(F("Remetente: "));
     LimpaBufferSerial();
     String remetente = LerString();
     
     if (remetente.length() == 0) {
-        Serial.println("Remetente não pode ser vazio!");
+        Serial.println(F("Remetente não pode ser vazio!"));
         return;
     }
     
-    Serial.println("Destinatário: ");
+    Serial.println(F("Destinatário: "));
     LimpaBufferSerial();
     String destinatario = LerString();
     
@@ -147,11 +179,11 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
     int idDestinatario = EncontraUsuario(usuarios, numUsuarios, destinatario.c_str());
     
     if (idRemetente == -1 || idDestinatario == -1) {
-        Serial.println("Usuário não encontrado!");
+        Serial.println(F("Usuário não encontrado!"));
         return;
     }
     
-    Serial.println("Mensagem: ");
+    Serial.println(F("Mensagem: "));
     LimpaBufferSerial();
     String mensagem = LerString();
 
@@ -176,17 +208,17 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
                      usuarios[idDestinatario].chavePublica);
     
     (*numMensagens)++;
-    Serial.println("Mensagem enviada com sucesso!");
+    Serial.println(F("Mensagem enviada com sucesso!"));
 }
 
 void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens) {
-    Serial.println("\nDigite seu username: ");
+    Serial.println(F("\nDigite seu username: "));
     LimpaBufferSerial();
     String username = LerString();
     
     int idUsuario = EncontraUsuario(usuarios, numUsuarios, username.c_str());
     if (idUsuario == -1) {
-        Serial.println("Usuário não encontrado!");
+        Serial.println(F("Usuário não encontrado!"));
         return;
     }
     
@@ -208,11 +240,11 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     }
     
     if (!temMensagem) {
-        Serial.println("Nenhuma mensagem encontrada.");
+        Serial.println(F("Nenhuma mensagem encontrada."));
         return;
     }
 
-    Serial.println("\nDeseja descriptografar as mensagens? (1-Sim/0-Não)");
+    Serial.println(F("\nDeseja descriptografar as mensagens? (1-Sim/0-Não)"));
     LimpaBufferSerial();
     while (!Serial.available()) {
         delay(10);
@@ -225,17 +257,17 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
         PrivateKeys *ChavePrivada;
         InitKeys(&ChavePrivada, NULL);
         
-        Serial.println("Aproxime o cartão RFID para ler a chave privada...");
+        Serial.println(F("Aproxime o cartão RFID para ler a chave privada..."));
         if (AguardaLeituraRFID()) {
             if (!LerChavesPrivadas(ChavePrivada, &mfrc522)) {
-                Serial.println("Erro ao ler chaves do cartão!");
+                Serial.println(F("Erro ao ler chaves do cartão!"));
                 DeleteKeys(ChavePrivada, NULL);
                 return;
             }
 
-            if (DEBUG) {
+            if (DEBUG_ON) {
                 // Print encrypted message details without exposing keys
-                Serial.println("\nDetalhes da mensagem criptografada:");
+                Serial.println(F("\nDetalhes da mensagem criptografada:"));
                 for (int i = 0; i < numMensagens; i++) {
                     if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
                         Serial.printf("Mensagem de %s:\n", mensagens[i].remetente);
@@ -246,7 +278,7 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
                 }
             }
 
-            Serial.println("\nMensagens descriptografadas:");
+            Serial.println(F("\nMensagens descriptografadas:"));
             bool algumSucesso = false;
             
             for (int i = 0; i < numMensagens; i++) {
@@ -254,30 +286,30 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
                     unsigned char mensagemDecriptada[MAX_MESSAGE_LENGTH + 1] = {0};
                     
                     if (DecriptaMensagem(mensagens[i].mensagemCriptografada, 
-                        mensagens[i].tamanhoMsg, mensagemDecriptada, ChavePrivada)) {
-                        
+                    mensagens[i].tamanhoMsg, mensagemDecriptada, ChavePrivada)) {
+                        mensagemDecriptada[MAX_MESSAGE_LENGTH] = '\0';
                         algumSucesso = true;
                         Serial.print("\nDe: ");
                         Serial.print(mensagens[i].remetente);
                         Serial.print(" [");
                         Serial.print(mensagens[i].data);
                         Serial.print("]\n\t");
-                        Serial.println((char*)mensagemDecriptada);
+                        Serial.println(F((char*)mensagemDecriptada));
                     } else {
-                        if (DEBUG) {
-                            Serial.println("Falha na descriptografia. Verificando valores:");
+                        if (DEBUG_ON) {
+                            Serial.println(F("Falha na descriptografia. Verificando valores:"));
                             Serial.print("Remetente: ");
-                            Serial.println(mensagens[i].remetente);
+                            Serial.println(F(mensagens[i].remetente));
                             Serial.print("Tamanho da mensagem: ");
-                            Serial.println(mensagens[i].tamanhoMsg);
+                            Serial.println(F(mensagens[i].tamanhoMsg));
                         }
                     }
                 }
             }
 
             if (!algumSucesso) {
-                Serial.println("Nenhuma mensagem foi descriptografada com sucesso.");
-                Serial.println("Verifique se o cartão RFID contém as chaves corretas.");
+                Serial.println(F("Nenhuma mensagem foi descriptografada com sucesso."));
+                Serial.println(F("Verifique se o cartão RFID contém as chaves corretas."));
             }
 
             mfrc522.PICC_HaltA();
@@ -287,32 +319,330 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     }
 }
 
+void inicializarSPIFFS() {
+    if (!SPIFFS.begin(true)) {
+      Serial.println(F("Erro ao montar SPIFFS"));
+      return;
+    }
+    Serial.println(F("SPIFFS montado com sucesso"));
+    
+    // Listar arquivos no SPIFFS
+    Serial.println(F("Arquivos no SPIFFS:"));
+    File root = SPIFFS.open("/");
+    File file = root.openNextFile();
+    while(file) {
+        Serial.print("  - ");
+        Serial.print(file.name());
+        Serial.print(" (");
+        Serial.print(file.size());
+        Serial.println(F(" bytes)"));
+        file = root.openNextFile();
+    }
+}
+
+bool verificarArquivosNecessarios() {
+    bool status = true;
+    
+    if (!SPIFFS.exists("/index.html")) {
+        Serial.println(F("Erro: arquivo index.html não encontrado!"));
+        status = false;
+    }
+    
+    if (!SPIFFS.exists("/success.html")) {
+        Serial.println(F("Erro: arquivo success.html não encontrado!"));
+        status = false;
+    }
+    
+    return status;
+}
+
+void inicializarWiFi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    Serial.print("Conectando ao WiFi ");
+
+    int tentativas = 0;
+    while (WiFi.status() != WL_CONNECTED && tentativas < 10) {
+        delay(500);
+        Serial.print(".");
+        tentativas++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println(F(""));
+        Serial.print("Conectado ao WiFi: ");
+        Serial.println(F(ssid));
+        Serial.print("Endereço IP: ");
+        Serial.println(WiFi.localIP());
+      
+        if (MDNS.begin("unlockey")) {
+            Serial.println(F("Serviço mDNS iniciado em: http://unlockey.local"));
+        }
+    }
+    else {
+        Serial.println(F("\nFalha ao conectar ao WiFi!"));
+    }
+}
+
+void verificarWiFi() {
+    static unsigned long ultimaVerificacao = 0;
+    unsigned long tempoAtual = millis();
+    
+    // Verifica a cada 30 segundos ou se houve overflow
+    if (tempoAtual < ultimaVerificacao || tempoAtual - ultimaVerificacao > 30000) {
+        ultimaVerificacao = tempoAtual;
+        
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println(F("WiFi desconectado. Tentando reconectar..."));
+            WiFi.reconnect();
+            int tentativas = 0;
+
+            while (WiFi.status() != WL_CONNECTED && tentativas < 10) {
+                delay(500);
+                Serial.print(".");
+                tentativas++;
+            }
+
+            if (WiFi.status() == WL_CONNECTED) {
+                Serial.println(F("\nWiFi reconectado!"));
+                Serial.print("IP: ");
+                Serial.println(WiFi.localIP());
+            } else {
+                Serial.println(F("\nFalha na reconexão WiFi!"));
+            }
+        }
+    }
+}
+
+void inicializarServidor() {
+    server.on("/", HTTP_GET, handleRoot);
+    server.on("/enviar", HTTP_POST, handleEnviarMensagem);
+    server.begin();
+    Serial.println(F("Servidor HTTP iniciado"));
+}
+
+void handleRoot() {
+    File file = SPIFFS.open("/index.html", "r");
+    if (!file) {
+        server.send(500, "text/plain", "Erro ao abrir arquivo");
+        return;
+    }
+  
+    String html = file.readString();
+    file.close();
+  
+    // Encontrar o ponto de inserção no HTML (depois de <option value="">Selecione o destinatário</option>)
+    int pos = html.indexOf("<option value=\"\">Selecione o destinatário</option>");
+    if (pos > 0) {
+        pos = html.indexOf("</select>", pos);
+    
+        if (pos > 0) {
+            // Adicionar opções de usuários dinamicamente
+            String userOptions = "";
+            for (int i = 0; i < numUsuarios; i++) {
+                userOptions += "<option value=\"" + String(usuarios[i].username) + "\">" + 
+                                String(usuarios[i].username) + "</option>\n";
+            }
+      
+            // Inserir as opções antes do fechamento do select
+            html = html.substring(0, pos) + userOptions + html.substring(pos);
+        }
+    }  
+    server.send(200, "text/html", html);
+}
+
+void handleEnviarMensagem() {
+    if (server.method() != HTTP_POST) {
+        server.sendHeader("Location", "/");
+        server.send(303);
+        return;
+    }
+
+    webRemetente = server.arg("remetente");
+    webDestinatario = server.arg("destinatario");
+    webMensagem = server.arg("mensagem");
+
+    if (webRemetente.length() == 0 || webDestinatario.length() == 0 || webMensagem.length() == 0) {
+        server.send(400, "text/html", "<html><body><h1>Erro!</h1><p>Todos os campos são obrigatórios</p><p><a href='/'>Voltar</a></p></body></html>");
+        return;
+    }
+    
+    if (numMensagens >= MAX_MESSAGES) {
+        server.send(503, "text/html", "<html><body><h1>Erro!</h1><p>Sistema de mensagens cheio. Tente novamente mais tarde.</p><p><a href='/'>Voltar</a></p></body></html>");
+        return;
+    }
+
+    novaMensagemWeb = true;
+    File file = SPIFFS.open("/success.html", "r");
+    if (!file) {
+        server.send(200, "text/html", "<html><body><h1>Mensagem enviada!</h1><p>Redirecionando...</p><script>setTimeout(function(){window.location='/';},3000);</script></body></html>");
+        return;
+    }
+
+    String html = file.readString();
+    file.close();
+    server.send(200, "text/html", html);
+}
+
+void processarMensagemWeb() {
+    if (!novaMensagemWeb || numMensagens >= MAX_MESSAGES) {
+        return;
+    }
+    
+    Serial.println(F("\nNova mensagem recebida via web:"));
+    
+    // Validação de entradas
+    if (webRemetente.length() == 0) {
+        Serial.println(F("Erro: Remetente não informado!"));
+        novaMensagemWeb = false;
+        return;
+    }
+    
+    if (webDestinatario.length() == 0) {
+        Serial.println(F("Erro: Destinatário não informado!"));
+        novaMensagemWeb = false;
+        return;
+    }
+    
+    if (webMensagem.length() == 0) {
+        Serial.println(F("Erro: Mensagem vazia!"));
+        novaMensagemWeb = false;
+        return;
+    }
+    
+    Serial.print("De: ");
+    Serial.println(webRemetente);
+    Serial.print("Para: ");
+    Serial.println(webDestinatario);
+    
+    int idDestinatario = EncontraUsuario(usuarios, numUsuarios, webDestinatario.c_str());
+    if (idDestinatario == -1) {
+        Serial.println(F("Destinatário não encontrado!"));
+        novaMensagemWeb = false;
+        return;
+    }
+    // Copiar remetente para a mensagem
+    strncpy(mensagens[numMensagens].remetente, webRemetente.c_str(), MAX_USERNAME_LENGTH - 1);
+    mensagens[numMensagens].remetente[MAX_USERNAME_LENGTH - 1] = '\0';
+    
+    // Copiar destinatário para a mensagem
+    strncpy(mensagens[numMensagens].destinatario, webDestinatario.c_str(), MAX_USERNAME_LENGTH - 1);
+    mensagens[numMensagens].destinatario[MAX_USERNAME_LENGTH - 1] = '\0';
+
+    if (webMensagem.length() > MAX_MESSAGE_LENGTH) {
+        webMensagem = webMensagem.substring(0, MAX_MESSAGE_LENGTH);
+    }
+
+    mensagens[numMensagens].tamanhoMsg = webMensagem.length();
+    SetDataAtual(mensagens[numMensagens].data);
+    EncriptaMensagem((unsigned char*)webMensagem.c_str(), 
+                    mensagens[numMensagens].mensagemCriptografada, 
+                    usuarios[idDestinatario].chavePublica);
+    
+    numMensagens++;
+    Serial.println(F("Mensagem processada com sucesso!"));
+    
+    novaMensagemWeb = false;
+}
+
+void mostrarStatusSistema() {
+    Serial.println(F("\n===== STATUS DO SISTEMA ====="));
+    Serial.print("Usuários: ");
+    Serial.print(numUsuarios);
+    Serial.print("/");
+    Serial.println(F(MAX_USERS));
+    
+    Serial.print("Mensagens: ");
+    Serial.print(numMensagens);
+    Serial.print("/");
+    Serial.println(F(MAX_MESSAGES));
+
+    Serial.print("Memória livre: ");
+    Serial.print(ESP.getFreeHeap());
+    Serial.println(F(" bytes"));
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("WiFi: Conectado (");
+        Serial.print(WiFi.RSSI());
+        Serial.println(F(" dBm)"));
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+        Serial.print("Interface web: http://");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println(F("WiFi: Desconectado"));
+    }
+    Serial.println(F("==========================="));
+}
+
 void setup() {
     Serial.begin(115200);
-    while(!Serial) delay(10);
     delay(1000);
 
-    Serial.println("\n\n=== Iniciando Sistema RFID ===");
-    SPI.begin();
+    configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org", "time.nist.gov");
+    Serial.println(F("\n"));
+    Serial.println(F("██╗░░░██╗███╗░░██╗██╗░░░░░░█████╗░░█████╗░██╗░░██╗███████╗██╗░░░██╗"));
+    Serial.println(F("██║░░░██║████╗░██║██║░░░░░██╔══██╗██╔══██╗██║░██╔╝██╔════╝╚██╗░██╔╝"));
+    Serial.println(F("██║░░░██║██╔██╗██║██║░░░░░██║░░██║██║░░╚═╝█████═╝░█████╗░░░╚████╔╝░"));
+    Serial.println(F("██║░░░██║██║╚████║██║░░░░░██║░░██║██║░░██╗██╔═██╗░██╔══╝░░░░╚██╔╝░░"));
+    Serial.println(F("╚██████╔╝██║░╚███║███████╗╚█████╔╝╚█████╔╝██║░╚██╗███████╗░░░██║░░░"));
+    Serial.println(F("░╚═════╝░╚═╝░░╚══╝╚══════╝░╚════╝░░╚════╝░╚═╝░░╚═╝╚══════╝░░░╚═╝░░░"));
+    Serial.println(F("\n       Sistema de Mensagens Criptografadas em RSA\n"));
+    inicializarSPIFFS();
+    verificarArquivosNecessarios();
+    SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+    
 
     // Initialize MFRC522
-    Serial.println("Iniciando MFRC522...");
-    mfrc522.PCD_Init();
-    Serial.println("===================================\n");
+    Serial.println(F("Iniciando MFRC522..."));
+    mfrc522.PCD_Init(SS_PIN, RST_PIN);
+
+    Serial.println(F("Iniciando servidor web..."));
+    inicializarWiFi();
+
+    if (WiFi.status() == WL_CONNECTED) {
+        inicializarServidor();
+        Serial.println("     🌐 Acesse a interface web: http://" + WiFi.localIP().toString());
+    }
+    Serial.println(F("===================================\n"));
 }
 
 void loop() {
-    Serial.println("\n=== Menu Principal ===");
-    Serial.println("1 - Cadastrar usuário");
-    Serial.println("2 - Enviar mensagem");
-    Serial.println("3 - Ler mensagens");
-    Serial.println("0 - Sair");
-    Serial.println("==================");
+    verificarWiFi();
+
+    if (WiFi.status() == WL_CONNECTED) {
+        server.handleClient();
+    }
+
+    if (novaMensagemWeb) {
+        processarMensagemWeb();
+    }
+
+    Serial.println(F("\n=== Menu Principal ==="));
+    Serial.println(F("1 - Cadastrar usuário"));
+    Serial.println(F("2 - Enviar mensagem"));
+    Serial.println(F("3 - Ler mensagens"));
+    Serial.println(F("9 - Status do sistema")); 
+    Serial.println(F("0 - Sair"));
+    Serial.println(F("=================="));
     Serial.print("Opção: ");
-    
-    while(!Serial.available()) {
+
+    // Aguardar entrada mantendo o servidor web ativo
+    unsigned long startTime = millis();
+    while(!Serial.available() && millis() - startTime < 20000) { // 20 segundos
+        if (WiFi.status() == WL_CONNECTED) {
+            server.handleClient();
+        }
+        if (novaMensagemWeb) {
+            processarMensagemWeb();
+        } 
         delay(10);
     }
+
+    if (!Serial.available()) {
+        return;
+    }
+
     int opcao = Serial.parseInt();
     LimpaBufferSerial();
     
@@ -321,7 +651,7 @@ void loop() {
             if (numUsuarios < MAX_USERS) {
                 CadastraUsuario(&usuarios[numUsuarios++]);
             } else {
-                Serial.println("Limite de usuários atingido!");
+                Serial.println(F("Limite de usuários atingido!"));
             }
             break;
             
@@ -329,25 +659,29 @@ void loop() {
             if (numMensagens < MAX_MESSAGES) {
                 EnviarMensagem(usuarios, numUsuarios, mensagens, &numMensagens);
             } else {
-                Serial.println("Limite de mensagens atingido!");
+                Serial.println(F("Limite de mensagens atingido!"));
             }
             break;
             
         case 3:
             LerMensagens(usuarios, numUsuarios, mensagens, numMensagens);
             break;
+
+        case 9:
+            mostrarStatusSistema();
+            break;
             
         case 0:
-            Serial.println("Limpando recursos...");
+            Serial.println(F("Limpando recursos..."));
             for (int i = 0; i < numUsuarios; i++) {
                 DeleteKeys(NULL, usuarios[i].chavePublica);
             }
-            Serial.println("Programa finalizado.");
+            Serial.println(F("Programa finalizado."));
             ESP.restart();
             break;
             
         default:
-            Serial.println("Opção inválida!");
+            Serial.println(F("Opção inválida!"));
             break;
     }
 }
