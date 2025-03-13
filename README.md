@@ -12,7 +12,7 @@ Repositório para o trabalho desenvolvido na disciplina de PIC1
 
 ## Resumo
 O projeto integra um site para envio de mensagens criptografadas e uma caixa
-física que usa biometria e NFC para autenticação e descriptografia. As chaves
+física que usa tecnologia NFC para autenticação e descriptografia. As chaves
 públicas são geradas na caixa, enquanto as privadas ficam apenas no NFC,
 garantindo segurança e privacidade.
 
@@ -23,8 +23,7 @@ duas principais partes:
 ● Um site que funciona como uma plataforma de envio e gerenciamento de
 mensagens criptografadas, semelhante a uma rede social básica.
 
-● Uma caixa física que realiza autenticação biométrica (sensor de impressão
-digital), leitura de tags NFC para decriptografia, e envio de dados para o site.
+● Uma caixa física que realiza leitura de tags NFC para decriptografia, e envio de dados para o site.
 O objetivo principal é garantir a segurança e privacidade no envio e recebimento de
 mensagens por meio de criptografia baseada em chaves públicas e privadas. O
 sistema utiliza tecnologia NFC para armazenar as chaves privadas de maneira segura,
@@ -64,19 +63,10 @@ funcionalidades incluem:
 
 ● Etapas do Cadastro:
 
-1. O usuário insere sua impressão digital no sensor biométrico.
-2. A caixa lê o tag NFC do usuário para obter a chave privada.
-3. Com base na chave privada, a caixa gera a chave pública
+1. A caixa lê o tag NFC do usuário para obter a chave privada.
+2. Com base na chave privada, a caixa gera a chave pública
 correspondente.
-4. O nome do usuário, junto com a chave pública e a impressão digital
-cadastrada, é enviado para o banco de dados do site.
-
-### Login
-● Etapas do Login:
-1. O usuário autentica-se utilizando sua impressão digital previamente
-cadastrada.
-2. Após a autenticação, a caixa verifica a identidade do usuário e acessa as
-mensagens criptografadas associadas a ele no site.
+3. O nome do usuário, junto com a chave pública é enviado para o banco de dados do site.
 
 ### Acesso às mensagens
 ● Etapas de Leitura de Mensagens:
@@ -92,11 +82,10 @@ dispositivo.
 
 ### Lista de componentes:
 1. ESP8266
-2. Sensor de digital
-3. Módulo RFID
-4. Cartão RFID
-5. Tela 2.4" touch - JC2432S028R - ILI9341
-6. Caixa
+2. Módulo RFID
+3. Cartão RFID
+4. Tela 2.4" touch - JC2432S028R - ILI9341
+5. Caixa
 
 ### Site
 
