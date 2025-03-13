@@ -21,8 +21,8 @@
 #endif
 #define DEBUG_ON 1
 
-const char *ssid = "NPY-J.C.V";
-const char *password = "jeremias3162";
+const char *ssid = "Simple";
+const char *password = "gabrielg";
 const long gmtOffset_sec = -3 * 3600; // UTC-3;
 const int daylightOffset_sec = 0; // config horário de verão
 bool wifiEnabled = false;
@@ -344,7 +344,7 @@ void setup() {
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
     delay(100);
     Serial.begin(115200);
-    delay(1000);
+    delay(500);
     btStop();
 
     Serial.println(F("\n"));
@@ -367,7 +367,7 @@ void setup() {
     delay(100);
 
     inicializarSPIFFS();
-    delay(500);
+    delay(300);
     verificarArquivosNecessarios();
     delay(100);
 
@@ -378,9 +378,8 @@ void setup() {
       delay(100);
     }
 
-    Serial.println(F("WiFi desabilitado por padrão. Use a opção 8 do menu para ativar."));
-    WiFi.mode(WIFI_OFF); 
-    WiFi.setTxPower(WIFI_POWER_MINUS_1dBm);
+    ativarWiFi();
+    delay(300);
     Serial.println(F("Inicialização completa!"));
     Serial.println(F("===================================\n"));
     digitalWrite(LED_BUILTIN, LOW);
@@ -408,7 +407,7 @@ void loop() {
         Serial.println(F("1 - Cadastrar usuário"));
         Serial.println(F("2 - Enviar mensagem"));
         Serial.println(F("3 - Ler mensagens"));
-        Serial.println(F("8 - Ativar WiFi"));
+        Serial.println(F("8 - Ativar/Desativar WiFi"));
         Serial.println(F("9 - Status do sistema")); 
         Serial.println(F("0 - Sair"));
         Serial.println(F("=================="));
@@ -442,10 +441,15 @@ void loop() {
               break;
 
           case 8:
-              Serial.print(F("Memória livre antes de conectar: "));
-              Serial.print(ESP.getFreeHeap());
-              Serial.println(F(" bytes"));
-              ativarWiFi();
+              if (!wifiEnabled){
+                Serial.print(F("Memória livre antes de conectar: "));
+                Serial.print(ESP.getFreeHeap());
+                Serial.println(F(" bytes"));
+                ativarWiFi();
+              } else {
+                wifiEnabled = false;
+              }
+              
               break;
 
           case 9:

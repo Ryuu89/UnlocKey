@@ -162,9 +162,6 @@ void ativarWiFi() {
     WiFi.disconnect(true);
     delay(500);
     WiFi.mode(WIFI_OFF);
-    delay(1000);
-    WiFi.setTxPower(WIFI_POWER_MINUS_1dBm);
-    delay(1000);
     Serial.println(F("Definindo modo WiFi..."));
     WiFi.mode(WIFI_STA);
     delay(1000);
@@ -174,11 +171,9 @@ void ativarWiFi() {
     Serial.print(ssid);
     Serial.print(" ");
     WiFi.begin(ssid, password);
-    delay(1000);
-    yield();
+    delay(500);
 
     Serial.println(F("Ajustando potência..."));
-    WiFi.setTxPower(WIFI_POWER_17dBm);  // Potência média
     delay(500);
     yield();
     Serial.println(F("Aguardando conexão WiFi..."));
