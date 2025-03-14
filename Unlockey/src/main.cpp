@@ -21,8 +21,8 @@
 #endif
 #define DEBUG_ON 1
 
-const char *ssid = "NPY-J.C.V";
-const char *password = "jeremias3162";
+const char *ssid = "Galaxy A32773F";
+const char *password = "gooo0280";
 const long gmtOffset_sec = -3 * 3600; // UTC-3;
 const int daylightOffset_sec = 0; // config horário de verão
 bool wifiEnabled = false;
@@ -127,7 +127,7 @@ void CadastraUsuario(Usuario *usuario) {
         }
         mfrc522.PICC_HaltA();
         mfrc522.PCD_StopCrypto1();
-    } else {
+    } else {    
         Serial.println(F("Nenhum cartão RFID detectado no tempo limite."));
         Serial.println(F("O usuário foi cadastrado mas as chaves privadas não foram salvas."));
     }
@@ -276,14 +276,14 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
                         Serial.print(" [");
                         Serial.print(mensagens[i].data);
                         Serial.print("]\n\t");
-                        Serial.println(F((char*)mensagemDecriptada));
+                        Serial.println((char*)mensagemDecriptada);
                     } else {
                         if (DEBUG_ON) {
                             Serial.println(F("Falha na descriptografia. Verificando valores:"));
                             Serial.print("Remetente: ");
-                            Serial.println(F(mensagens[i].remetente));
+                            Serial.println(mensagens[i].remetente);
                             Serial.print("Tamanho da mensagem: ");
-                            Serial.println(F(mensagens[i].tamanhoMsg));
+                            Serial.println(mensagens[i].tamanhoMsg);
                         }
                     }
                 }
@@ -318,17 +318,17 @@ void mostrarStatusSistema() {
     Serial.println(F(" bytes"));
     
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.print("WiFi: Conectado (");
+        Serial.print("WiFi: Conectado ");
         yield();
     
         // Verificação mais segura para RSSI
         int rssi = WiFi.RSSI();
         if (rssi < 0 && rssi > -120) {  // Valor razoável
-            Serial.print(F(" ("));
+            Serial.print(F("("));
             Serial.print(rssi);
             Serial.println(F(" dBm)"));
         } else {
-          Serial.println(F(" (sinal não mensurável)"));
+          Serial.println(F("(sinal não mensurável)"));
         }
         Serial.print("IP: ");
         Serial.println(WiFi.localIP());

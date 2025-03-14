@@ -3,7 +3,7 @@
 #include "rsa.h"
 
 // Constantes compartilhadas
-#define MAX_USERS 5
+#define MAX_USERS 10
 #define MAX_MESSAGES 30
 #define MAX_MESSAGE_LENGTH 100
 #define MAX_USERNAME_LENGTH 15

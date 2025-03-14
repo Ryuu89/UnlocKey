@@ -256,6 +256,8 @@ void processarMensagemWeb() {
     if (webMensagem.length() > MAX_MESSAGE_LENGTH) {
         webMensagem = webMensagem.substring(0, MAX_MESSAGE_LENGTH);
     }
+    
+    webMensagem.replace("+"," ");
 
     mensagens[numMensagens].tamanhoMsg = webMensagem.length();
     SetDataAtual(mensagens[numMensagens].data);
