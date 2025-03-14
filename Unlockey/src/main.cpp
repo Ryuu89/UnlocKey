@@ -21,8 +21,8 @@
 #endif
 #define DEBUG_ON 1
 
-const char *ssid = "Simple";
-const char *password = "gabrielg";
+const char *ssid = "NPY-J.C.V";
+const char *password = "jeremias3162";
 const long gmtOffset_sec = -3 * 3600; // UTC-3;
 const int daylightOffset_sec = 0; // config horário de verão
 bool wifiEnabled = false;

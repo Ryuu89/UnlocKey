@@ -75,7 +75,7 @@ void handleRoot() {
     file.close();
     
     // Encontrar o ponto de inserção no HTML
-    int pos = html.indexOf("<option value=\"\">Selecione o destinatário</option>");
+    int pos = html.indexOf("<option value=\"\">Selecione o destinatario</option>");
     if (pos > 0) {
         pos = html.indexOf("</select>", pos);
     
