@@ -1,0 +1,4 @@
+AVISO!!
+
+Esta é a versão do Unlockey sem interface gráfica utilizando o display.
+Possui apenas o RFID e integração web
