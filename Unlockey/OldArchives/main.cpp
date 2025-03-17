@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include "DisplayInterface.h"
 #include "DataTypes.h"
 #include "WebInterface.h"
 #include "rsa.h"
@@ -10,22 +9,36 @@
 #include "soc/rtc_cntl_reg.h"
 #include <WiFi.h>
 #include <SPIFFS.h>
+#include "DisplayInterface.h"
 
+// Pin definitions
 #define SS_PIN  5
 #define RST_PIN 22
 #define SCK_PIN 18
 #define MISO_PIN 19
 #define MOSI_PIN 23
+#define TFT_CS 15  // Display CS pin
 
 #ifndef LED_BUILTIN
   #define LED_BUILTIN 2
 #endif
 #define DEBUG_ON 1
 
+// Simplifique ainda mais as funções useRFID e useDisplay
+void useRFID() {
+    digitalWrite(TFT_CS, HIGH);  // Apenas desative o display
+}
+
+void useDisplay() {
+    digitalWrite(SS_PIN, HIGH);  // Apenas desative o RFID
+    digitalWrite(TFT_CS, LOW);   // Ative o display
+}
+
+// Global variables
 const char *ssid = "Galaxy A32773F";
 const char *password = "gooo0280";
 const long gmtOffset_sec = -3 * 3600; // UTC-3;
-const int daylightOffset_sec = 0; // config horário de verão
+const int daylightOffset_sec = 0;
 bool wifiEnabled = false;
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
@@ -33,6 +46,7 @@ Usuario usuarios[MAX_USERS];
 Mensagem mensagens[MAX_MESSAGES];
 int numUsuarios = 0, numMensagens = 0;
 unsigned long lastHeapCheck = 0;
+bool operationInProgress = false;
 
 void LimpaBufferSerial() {
     while(Serial.available() > 0) {
@@ -63,18 +77,33 @@ void SetDataAtual(char* data) {
     strftime(data, 17, "%d/%m/%Y %H:%M", &timeinfo);
 }
 
+// Substitua a função AguardaLeituraRFID para ficar MUITO mais próxima do original funcional
 int AguardaLeituraRFID() {
+    // Mostra tela de leitura RFID no display
+    useDisplay();
+    display.showRFIDReadingScreen();
+    
     Serial.println(F("Aguardando cartão RFID..."));
     unsigned long tempoInicio = millis();
     const unsigned int TIMEOUT = 20000; // 20 segundos de timeout
+    int animCount = 0;
     
     digitalWrite(LED_BUILTIN, HIGH);
 
+    // LOOP EXATAMENTE COMO NO ORIGINAL QUE FUNCIONAVA
     while (millis() - tempoInicio < TIMEOUT) {
+        // Mescle o original com a atualização da animação
         if (!mfrc522.PICC_IsNewCardPresent()) {
+            // Update animation periodicamente
+            if ((millis() % 200) < 10) {
+                useDisplay();
+                display.updateRFIDAnimation(animCount++);
+                useRFID();
+            }
             delay(50);
             continue;
         }
+        
         Serial.println(F("Cartão detectado!"));
 
         if (!mfrc522.PICC_ReadCardSerial()) {
@@ -82,19 +111,38 @@ int AguardaLeituraRFID() {
             continue;
         }
 
-        Serial.print("UID do cartão: ");
+        Serial.print(F("UID do cartão: "));
         for (byte i = 0; i < mfrc522.uid.size; i++) {
             Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
             Serial.print(mfrc522.uid.uidByte[i], HEX);
         }
         Serial.println();
+        
         digitalWrite(LED_BUILTIN, LOW);
+        
+        // Sucesso na leitura - mostre no display
+        useDisplay();
+        display.showRFIDSuccess();
+        
         return 1;
     }
   
     digitalWrite(LED_BUILTIN, LOW);
     Serial.println(F("Tempo esgotado! Nenhum cartão detectado."));
+    
+    useDisplay();
+    display.showRFIDTimeout();
+    
     return 0;
+}
+
+int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
+    for (int i = 0; i < numUsuarios; i++) {
+        if (strcmp(usuarios[i].username, username) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 void CadastraUsuario(Usuario *usuario) {
@@ -111,37 +159,50 @@ void CadastraUsuario(Usuario *usuario) {
     strncpy(usuario->username, nome.c_str(), MAX_USERNAME_LENGTH - 1);
     usuario->username[MAX_USERNAME_LENGTH - 1] = '\0';
     
+    // Update display with username
+    strncpy(display.usernameField.text, nome.c_str(), MAX_USERNAME_LENGTH - 1);
+    display.usernameField.text[MAX_USERNAME_LENGTH - 1] = '\0';
+    display.usernameField.cursorPos = nome.length();
+    
+    // Atualiza a tela com o nome digitado
+    useDisplay();
+    display.showUserRegistration();
+    
     InitKeys(&chavePrivada, &usuario->chavePublica);
     GeraChaves(chavePrivada, usuario->chavePublica);
     
     Serial.print("\nChaves geradas para " + String(usuario->username) + ":");
     MostraChaves(chavePrivada, usuario->chavePublica);
     Serial.println(F("\nIMPORTANTE: Aproxime a TAG RFID para salvar as chaves privadas!"));
+    
+    // Show message on display
+    char mensagemBuffer[100];
+    snprintf(mensagemBuffer, sizeof(mensagemBuffer), "Chaves geradas para %s\nAproxime cartao RFID", nome.c_str());
+    useDisplay();
+    display.showMessage(mensagemBuffer, 1500);
 
+    // Ensure SPI is configured for RFID
     if (AguardaLeituraRFID()) {
         if (SalvarChaves(chavePrivada, NULL, &mfrc522)) {
             Serial.println(F("Chaves salvas com sucesso!"));
+            useDisplay();
+            display.showMessage("Chaves salvas com sucesso!", 2000);
         } else {
             Serial.println(F("ERRO: Falha ao salvar chaves no cartão!"));
             Serial.println(F("O usuário foi cadastrado mas as chaves privadas não foram salvas."));
             Serial.println(F("Por favor, tente novamente com outro cartão RFID."));
+            useDisplay();
+            display.showMessage("ERRO: Falha ao salvar chaves!\nUsuario cadastrado sem chave privada.", 2500);
         }
         mfrc522.PICC_HaltA();
         mfrc522.PCD_StopCrypto1();
     } else {    
         Serial.println(F("Nenhum cartão RFID detectado no tempo limite."));
         Serial.println(F("O usuário foi cadastrado mas as chaves privadas não foram salvas."));
+        useDisplay();
+        display.showMessage("Timeout! Usuario cadastrado\nsem chave privada.", 2000);
     }
     DeleteKeys(chavePrivada, NULL);
-}
-
-int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
-    for (int i = 0; i < numUsuarios; i++) {
-        if (strcmp(usuarios[i].username, username) == 0) {
-            return i;
-        }
-    }
-    return -1;
 }
 
 void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens) {
@@ -163,6 +224,8 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
     
     if (idRemetente == -1 || idDestinatario == -1) {
         Serial.println(F("Usuário não encontrado!"));
+        useDisplay();
+        display.showMessage("Usuário não encontrado!", 2000);
         return;
     }
     
@@ -186,12 +249,19 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
     mensagens[*numMensagens].tamanhoMsg = mensagem.length();
     SetDataAtual(mensagens[*numMensagens].data);
     
+    // Atualiza a tela indicando que a mensagem está sendo enviada
+    useDisplay();
+    display.showMessage("Enviando mensagem...\nCriptografando dados...", 1000);
+    
     EncriptaMensagem((unsigned char*)mensagem.c_str(), 
                      mensagens[*numMensagens].mensagemCriptografada, 
                      usuarios[idDestinatario].chavePublica);
     
     (*numMensagens)++;
     Serial.println(F("Mensagem enviada com sucesso!"));
+    
+    useDisplay();
+    display.showMessage("Mensagem enviada com sucesso!", 2000);
 }
 
 void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens) {
@@ -202,8 +272,15 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     int idUsuario = EncontraUsuario(usuarios, numUsuarios, username.c_str());
     if (idUsuario == -1) {
         Serial.println(F("Usuário não encontrado!"));
+        useDisplay();
+        display.showMessage("Usuário não encontrado!", 2000);
         return;
     }
+    
+    // Atualiza o display com a lista de mensagens
+    useDisplay();
+    display.selectedUser = idUsuario;
+    display.showReadMessages(usuarios, numUsuarios, mensagens, numMensagens);
     
     bool temMensagem = false;
     for (int i = 0; i < numMensagens; i++) {
@@ -224,6 +301,8 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     
     if (!temMensagem) {
         Serial.println(F("Nenhuma mensagem encontrada."));
+        useDisplay();
+        display.showMessage("Nenhuma mensagem encontrada para este usuário.", 2000);
         return;
     }
 
@@ -237,6 +316,11 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     int opc = resposta.toInt();
 
     if (opc == 1) {
+        // Ativa o modo de descriptografia na interface
+        useDisplay();
+        display.setDecryptMode(true);
+        display.showReadMessages(usuarios, numUsuarios, mensagens, numMensagens);
+        
         PrivateKeys *ChavePrivada;
         InitKeys(&ChavePrivada, NULL);
         
@@ -244,25 +328,15 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
         if (AguardaLeituraRFID()) {
             if (!LerChavesPrivadas(ChavePrivada, &mfrc522)) {
                 Serial.println(F("Erro ao ler chaves do cartão!"));
+                useDisplay();
+                display.showMessage("Erro ao ler chaves do cartão!", 2000);
                 DeleteKeys(ChavePrivada, NULL);
                 return;
             }
 
-            if (DEBUG_ON) {
-                // Print encrypted message details without exposing keys
-                Serial.println(F("\nDetalhes da mensagem criptografada:"));
-                for (int i = 0; i < numMensagens; i++) {
-                    if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
-                        Serial.printf("Mensagem de %s:\n", mensagens[i].remetente);
-                        Serial.printf("Tamanho: %d bytes\n", mensagens[i].tamanhoMsg);
-                        Serial.printf("Chaves privadas: ");
-                        MostraChaves(ChavePrivada, NULL);
-                    }
-                }
-            }
-
             Serial.println(F("\nMensagens descriptografadas:"));
             bool algumSucesso = false;
+            String mensagensDecriptadas = "";
             
             for (int i = 0; i < numMensagens; i++) {
                 if (strcmp(mensagens[i].destinatario, username.c_str()) == 0) {
@@ -272,33 +346,51 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
                     mensagens[i].tamanhoMsg, mensagemDecriptada, ChavePrivada)) {
                         mensagemDecriptada[MAX_MESSAGE_LENGTH] = '\0';
                         algumSucesso = true;
+                        
+                        // Formata a mensagem para exibição
+                        String msgFormatada = "De: ";
+                        msgFormatada += mensagens[i].remetente;
+                        msgFormatada += " [";
+                        msgFormatada += mensagens[i].data;
+                        msgFormatada += "]\n";
+                        msgFormatada += (char*)mensagemDecriptada;
+                        msgFormatada += "\n\n";
+                        
+                        mensagensDecriptadas += msgFormatada;
+                        
+                        // Também mostra no terminal
                         Serial.print("\nDe: ");
                         Serial.print(mensagens[i].remetente);
                         Serial.print(" [");
                         Serial.print(mensagens[i].data);
                         Serial.print("]\n\t");
                         Serial.println((char*)mensagemDecriptada);
-                    } else {
-                        if (DEBUG_ON) {
-                            Serial.println(F("Falha na descriptografia. Verificando valores:"));
-                            Serial.print("Remetente: ");
-                            Serial.println(mensagens[i].remetente);
-                            Serial.print("Tamanho da mensagem: ");
-                            Serial.println(mensagens[i].tamanhoMsg);
-                        }
                     }
                 }
             }
 
-            if (!algumSucesso) {
+            if (algumSucesso) {
+                // Exibe as mensagens descriptografadas no display
+                useDisplay();
+                display.showDecryptedMessages(mensagensDecriptadas.c_str());
+            } else {
                 Serial.println(F("Nenhuma mensagem foi descriptografada com sucesso."));
                 Serial.println(F("Verifique se o cartão RFID contém as chaves corretas."));
+                useDisplay();
+                display.showMessage("Falha na descriptografia.\nVerifique se o cartão RFID contém as chaves corretas.", 3000);
             }
 
             mfrc522.PICC_HaltA();
             mfrc522.PCD_StopCrypto1();
+        } else {
+            useDisplay();
+            display.showMessage("Falha na leitura do cartão RFID.", 2000);
         }
         DeleteKeys(ChavePrivada, NULL);
+        
+        // Desativa o modo de descriptografia
+        useDisplay();
+        display.setDecryptMode(false);
     }
 }
 
@@ -339,109 +431,17 @@ void mostrarStatusSistema() {
         Serial.println(F("WiFi: Desconectado"));
     }
     Serial.println(F("==========================="));
+    
+    // Exibe informações no display
+    useDisplay();
+    display.showSystemStatus();
+    delay(3000);
 }
 
-void atualizarInterfaceGrafica() {
-    // Verificar entrada do display touch
-    if (display.handleTouch()) {
-        // Se houver um toque, processar baseado no estado atual
-        UIState currentState = display.getState();
-        
-        switch (currentState) {
-            case CADASTRAR_USUARIO:
-                if (numUsuarios < MAX_USERS) {
-                    if (display.getUserRegistrationData()) {
-                        // Obter dados do formulário e cadastrar
-                        Usuario *novoUsuario = &usuarios[numUsuarios];
-                        strncpy(novoUsuario->username, display.getFormUsername(), MAX_USERNAME_LENGTH - 1);
-                        novoUsuario->username[MAX_USERNAME_LENGTH - 1] = '\0';
-                        
-                        PrivateKeys *chavePrivada;
-                        InitKeys(&chavePrivada, &novoUsuario->chavePublica);
-                        GeraChaves(chavePrivada, novoUsuario->chavePublica);
-                        
-                        display.showMessage("Aproxime o cartao RFID...");
-                        
-                        if (AguardaLeituraRFID()) {
-                            if (SalvarChaves(chavePrivada, NULL, &mfrc522)) {
-                                numUsuarios++;
-                                display.showMessage("Usuario cadastrado\ncom sucesso!");
-                            } else {
-                                display.showMessage("Falha ao salvar\nchaves no cartao!");
-                            }
-                            mfrc522.PICC_HaltA();
-                            mfrc522.PCD_StopCrypto1();
-                        } else {
-                            display.showMessage("Tempo esgotado!\nUsuario cadastrado\nsem chaves.");
-                        }
-                        DeleteKeys(chavePrivada, NULL);
-                    }
-                } else {
-                    display.showMessage("Limite de usuarios\natingido!");
-                }
-                break;
-                
-            case ENVIAR_MENSAGEM:
-                if (numMensagens < MAX_MESSAGES) {
-                    if (display.getMessageFormData()) {
-                        // Processar envio de mensagem usando os dados do formulário
-                        String remetente = display.getFormRemetente();
-                        String destinatario = display.getFormDestinatario();
-                        String mensagem = display.getFormMensagem();
-                        
-                        int idRemetente = EncontraUsuario(usuarios, numUsuarios, remetente.c_str());
-                        int idDestinatario = EncontraUsuario(usuarios, numUsuarios, destinatario.c_str());
-                        
-                        if (idRemetente == -1 || idDestinatario == -1) {
-                            display.showMessage("Usuario nao encontrado!");
-                            break;
-                        }
-                        
-                        // Copia remetente/destinatario com segurança
-                        strncpy(mensagens[numMensagens].remetente, remetente.c_str(), MAX_USERNAME_LENGTH - 1);
-                        mensagens[numMensagens].remetente[MAX_USERNAME_LENGTH - 1] = '\0';
-                        
-                        strncpy(mensagens[numMensagens].destinatario, destinatario.c_str(), MAX_USERNAME_LENGTH - 1);
-                        mensagens[numMensagens].destinatario[MAX_USERNAME_LENGTH - 1] = '\0';
-                        
-                        // Guarda tamanho real da mensagem
-                        mensagens[numMensagens].tamanhoMsg = mensagem.length();
-                        SetDataAtual(mensagens[numMensagens].data);
-                        
-                        EncriptaMensagem((unsigned char*)mensagem.c_str(), 
-                                         mensagens[numMensagens].mensagemCriptografada, 
-                                         usuarios[idDestinatario].chavePublica);
-                        
-                        numMensagens++;
-                        display.showMessage("Mensagem enviada\ncom sucesso!");
-                    }
-                } else {
-                    display.showMessage("Limite de mensagens\natingido!");
-                }
-                break;
-                
-            case LER_MENSAGENS:
-                display.showReadMessages(usuarios, numUsuarios, mensagens, numMensagens);
-                // Restante da lógica é tratado dentro do método showReadMessages
-                break;
-                
-            case STATUS_SISTEMA:
-                display.showSystemStatus(numUsuarios, numMensagens);
-                break;
-                
-            case DESLIGAR_SISTEMA:
-                display.showMessage("Desligando...");
-                delay(1000);
-                for (int i = 0; i < numUsuarios; i++) {
-                    DeleteKeys(NULL, usuarios[i].chavePublica);
-                }
-                ESP.restart();
-                break;
-        }
-    }
-    display.update();
-}
+// Function prototype
+void imprimirMenuPrincipal();
 
+// Completely replace the setup function with a version closer to the original working setup
 void setup() {
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
     delay(100);
@@ -452,140 +452,192 @@ void setup() {
     Serial.println(F("\n"));
     Serial.println(F("██╗░░░██╗███╗░░██╗██╗░░░░░░█████╗░░█████╗░██╗░░██╗███████╗██╗░░░██╗"));
     Serial.println(F("██║░░░██║████╗░██║██║░░░░░██╔══██╗██╔══██╗██║░██╔╝██╔════╝╚██╗░██╔╝"));
-    Serial.println(F("██║░░░██║██╔██╗██║██║░░░░░██║░░██║██║░░╚═╝█████═╝░█████╗░░░╚████╔╝░"));
-    Serial.println(F("██║░░░██║██║╚████║██║░░░░░██║░░██║██║░░██╗██╔═██╗░██╔══╝░░░░╚██╔╝░░"));
+    Serial.println(F("██║░░░██║██╔██╗██║██║░░░░░██║░░██║██║░░╚═╝█████═╝░█████╗░░╚████╔╝░"));
+    Serial.println(F("██║░░░██║██║╚████║██║░░░░░██║░░██║██║░░██╗██╔═██╗░██╔══╝░░░╚██╔╝░░"));
     Serial.println(F("╚██████╔╝██║░╚███║███████╗╚█████╔╝╚█████╔╝██║░╚██╗███████╗░░░██║░░░"));
     Serial.println(F("░╚═════╝░╚═╝░░╚══╝╚══════╝░╚════╝░░╚════╝░╚═╝░░╚═╝╚══════╝░░░╚═╝░░░"));
     Serial.println(F("\n       Sistema de Mensagens Criptografadas em RSA\n"));
     pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, HIGH);  // LED indica inicialização
-    delay(100);
-    SPI.begin();
+    digitalWrite(LED_BUILTIN, HIGH);
     delay(100);
 
-    // Initialize MFRC522
+    // Set up CS pins (only these are necessary)
+    pinMode(SS_PIN, OUTPUT);
+    pinMode(TFT_CS, OUTPUT);
+    digitalWrite(SS_PIN, HIGH);
+    digitalWrite(TFT_CS, HIGH);
+    
+    // Original working SPI initialization
+    SPI.begin();
+    delay(100);
+    
+    // Display initialization
+    useDisplay();
+    display.begin();
+    display.showSplashScreen();
+    delay(1000);
+    
+    // SPIFFS initialization
+    Serial.println(F("Inicializando SPIFFS..."));
+    inicializarSPIFFS();
+    verificarArquivosNecessarios();
+    
+    // RFID initialization - EXACTLY as in original working code
     Serial.println(F("Iniciando MFRC522..."));
     mfrc522.PCD_Init(SS_PIN, RST_PIN);
     delay(100);
-
-    inicializarSPIFFS();
-    delay(300);
-    verificarArquivosNecessarios();
-    delay(100);
-
-    for(int i=0; i<6; i++) {
-      digitalWrite(LED_BUILTIN, LOW);
-      delay(100);
-      digitalWrite(LED_BUILTIN, HIGH);
-      delay(100);
-    }
-
-    ativarWiFi();
-    delay(300);
-    display.begin();
-    Serial.println(F("Inicialização completa!"));
-    Serial.println(F("===================================\n"));
-    digitalWrite(LED_BUILTIN, LOW);
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 1);
-}
-
-void loop() {
-    static unsigned long lastWifiCheck = 0;
-    static bool menuExibido = false;
-    if (millis() - lastWifiCheck > 30000 || millis() < lastWifiCheck) {
-        lastWifiCheck = millis();
-        verificarWiFi();
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        server.handleClient();
-    }
-
-    if (novaMensagemWeb) {
-      processarMensagemWeb();
-    }
-
-    if (!menuExibido) {
-        Serial.println(F("\n=== Menu Principal ==="));
-        Serial.println(F("1 - Cadastrar usuário"));
-        Serial.println(F("2 - Enviar mensagem"));
-        Serial.println(F("3 - Ler mensagens"));
-        Serial.println(F("8 - Ativar/Desativar WiFi"));
-        Serial.println(F("9 - Status do sistema")); 
-        Serial.println(F("0 - Sair"));
-        Serial.println(F("=================="));
-        Serial.print("Opção: ");
-        
-        menuExibido = true;
+    
+    // Visual indicator
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(100);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(100);
     }
     
-    if (Serial.available()) {
-      int opcao = Serial.parseInt();
-      LimpaBufferSerial();
-      switch(opcao) {
-          case 1:
-              if (numUsuarios < MAX_USERS) {
-                  CadastraUsuario(&usuarios[numUsuarios++]);
-              } else {
-                  Serial.println(F("Limite de usuários atingido!"));
-              }
-              break;
-              
-          case 2:
-              if (numMensagens < MAX_MESSAGES) {
-                  EnviarMensagem(usuarios, numUsuarios, mensagens, &numMensagens);
-              } else {
-                  Serial.println(F("Limite de mensagens atingido!"));
-              }
-              break;
-              
-          case 3:
-              LerMensagens(usuarios, numUsuarios, mensagens, numMensagens);
-              break;
+    Serial.println(F("Inicialização completa!"));
+    Serial.println(F("===================================\n"));
+    
+    digitalWrite(LED_BUILTIN, LOW);
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 1);
+    
+    // Show menu options
+    useDisplay();
+    display.showMainMenu();
+    imprimirMenuPrincipal();
+}
 
-          case 8:
-              if (!wifiEnabled){
-                Serial.print(F("Memória livre antes de conectar: "));
-                Serial.print(ESP.getFreeHeap());
-                Serial.println(F(" bytes"));
-                ativarWiFi();
-              } else {
-                wifiEnabled = false;
-              }
-              
-              break;
+// Função para imprimir o menu principal no terminal
+void imprimirMenuPrincipal() {
+    Serial.println(F("\n=== Menu Principal ==="));
+    Serial.println(F("[1] - Cadastrar usuário"));
+    Serial.println(F("[2] - Enviar mensagem"));
+    Serial.println(F("[3] - Ler mensagens"));
+    Serial.println(F("[8] - Ativar/Desativar WiFi"));
+    Serial.println(F("[9] - Status do sistema")); 
+    Serial.println(F("[0] - Sair"));
+    Serial.println(F("=================="));
+    Serial.print("Opção: ");
+}
 
-          case 9:
-              mostrarStatusSistema();
-              break;
-              
-          case 0:
-            {
-              Serial.println("Digite 0 para confirmar.");
-              String resposta = LerString();
-              int opc = resposta.toInt();
+// Versão melhorada da função loop
+void loop() {
+    static unsigned long lastWifiCheck = 0;
+    
+    // Processamento WiFi e Web apenas quando não há operações em andamento
+    if (!operationInProgress) {
+        // WiFi and web handlers
+        if (millis() - lastWifiCheck > 30000) {
+            lastWifiCheck = millis();
+            verificarWiFi();
+        }
 
-              if (opc == 0) {
-                Serial.println(F("Limpando recursos..."));
-                for (int i = 0; i < numUsuarios; i++) {
-                    DeleteKeys(NULL, usuarios[i].chavePublica);
-                }
-                Serial.println(F("Programa finalizado."));
-                delay(1000);
-                ESP.restart();
-              }
-            }
-              break;
-              
-          default:
-              Serial.println(F("Opção inválida!"));
-              break;
-      }
+        if (WiFi.status() == WL_CONNECTED) {
+            server.handleClient();
+        }
 
-      menuExibido = false;
-      delay(500);
-    } else{
-      delay(200);
+        if (novaMensagemWeb) {
+            processarMensagemWeb();
+        }
     }
-    atualizarInterfaceGrafica();
+
+    // Priorizar a entrada do terminal
+    if (Serial.available()) {
+        // Lê apenas o primeiro caractere
+        char firstChar = Serial.peek();
+        
+        if (isdigit(firstChar)) {
+            int opcao = Serial.parseInt();
+            LimpaBufferSerial();
+            
+            Serial.println(opcao); // Feedback para o usuário
+            
+            // Inicia uma operação
+            operationInProgress = true;
+            
+            switch(opcao) {
+                case 1:
+                    if (numUsuarios < MAX_USERS) {
+                        useDisplay();
+                        display.showUserRegistration();
+                        CadastraUsuario(&usuarios[numUsuarios++]);
+                    } else {
+                        Serial.println(F("Limite de usuários atingido!"));
+                        useDisplay();
+                        display.showMessage("Limite de usuários atingido!", 2000);
+                    }
+                    break;
+                    
+                case 2:
+                    if (numMensagens < MAX_MESSAGES) {
+                        Serial.println(F("=== Envio de Mensagem ==="));
+                        EnviarMensagem(usuarios, numUsuarios, mensagens, &numMensagens);
+                    } else {
+                        Serial.println(F("Limite de mensagens atingido!"));
+                        useDisplay();
+                        display.showMessage("Limite de mensagens atingido!", 2000);
+                    }
+                    break;
+                    
+                case 3:
+                    Serial.println(F("=== Leitura de Mensagens ==="));
+                    useDisplay();
+                    display.resetUserSelection();
+                    LerMensagens(usuarios, numUsuarios, mensagens, numMensagens);
+                    break;
+    
+                case 8:  
+                    Serial.println(F("=== Configuração de WiFi ==="));
+                    Serial.print(F("Memória livre antes de conectar: "));
+                    Serial.print(ESP.getFreeHeap());
+                    Serial.println(F(" bytes"));
+                    ativarWiFi();
+                    break;
+    
+                case 9:
+                    Serial.println(F("=== Status do Sistema ==="));
+                    mostrarStatusSistema();
+                    break;
+                    
+                case 0:
+                  {
+                    Serial.println("Digite 0 para confirmar.");
+                    String resposta = LerString();
+                    int opc = resposta.toInt();
+    
+                    if (opc == 0) {
+                      Serial.println(F("Limpando recursos..."));
+                      for (int i = 0; i < numUsuarios; i++) {
+                          DeleteKeys(NULL, usuarios[i].chavePublica);
+                      }
+                      Serial.println(F("Programa finalizado."));
+                      delay(1000);
+                      ESP.restart();
+                    }
+                  }
+                  break;
+                    
+                default:
+                    Serial.println(F("Opção inválida!"));
+                    break;
+            }
+    
+            // Operação concluída, retorna ao menu principal
+            operationInProgress = false;
+            
+            // Volta para o menu principal no display
+            useDisplay();
+            display.showMainMenu();
+            
+            // Imprime menu principal no terminal
+            imprimirMenuPrincipal();
+        }
+        else {
+            // Limpa o buffer se não for um dígito
+            LimpaBufferSerial();
+        }
+    } 
+    else {
+        delay(10); // Reduz o uso da CPU quando inativo
+    }
 }

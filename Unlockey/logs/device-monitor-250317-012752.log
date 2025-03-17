@@ -1,0 +1,39 @@
+[37m01:27:58.695 > I[37mn[37micializa[37mç[37mão complet[37ma[37m!
+01:27:58.698 > =======[37m=[37m===========[37m=[37m==========[37m=[37m====
+01:27:58.701 > 
+[37m01:28:01.042 > 
+[37m01:28:01.043 > === M[37me[37mnu Princip[37ma[37ml ===
+01:28:01.046 > [1] [37m- Cadastrar[37m [37musuário
+01:28:01.048 > [[37m2] - Enviar[37m [37mmensagem
+01:28:01.049 > [[37m3] - Ler men[37ms[37magens
+01:28:01.051 > [8][37m [37m- Ativar/D[37me[37msativar WiF[37mi[37m
+01:28:01.055 > [9] - St[37matus do sist[37me[37mma
+01:28:01.056 > [0] - [37mSair
+01:28:01.058 > =================[37m=[37m
+01:28:01.059 > Opção: [37m[[37mD[37mISPLAY][37m [37mMudança d[37me[37m estado: 0 [37m[37m→ 1
+[37m01:28:08.324 > D[37mi[37mgite o nom[37me[37m do usuár[37mi[37mo: 
+[37m01:28:13.928 > 
+[37m01:28:13.929 > C[37mhaves ger[37ma[37mdas para G:[37m
+[37m01:28:13.931 > Chave Púb[37ml[37mica:
+01:28:13.932 > 	e = [37m2[37m5 | n = 31[37m8[37m31
+01:28:13.934 > Chave P[37mr[37mivada:
+01:28:13.935 > 	p[37m [37m= 139 | q =[37m [37m229 | d = [37m2[37m0137
+01:28:13.938 > 
+01:28:13.938 > IMPO[37mR[37mTANTE: Apr[37mo[37mxime a TAG[37m [37mRFID para s[37ma[37mlvar as cha[37mv[37mes privada[37ms[37m!
+[37m01:28:20.439 > A[37mgu[37ma[37mrdando car[37mt[37mão RFID...[37m[37m
+[37m01:28:23.635 > C[37ma[37mrtão dete[37mc[37mtado!
+[37m01:28:23.638 > U[37mI[37mD do cart[37mã[37mo:  8B 58 6[37m5[37m 0A
+[37m01:28:23.647 > C[37mhav[37me[37ms salvas co[37mm[37m sucesso![37m
+[37m01:28:42.678 > 
+[37m01:28:42.678 > ===[37m [37mMenu Princi[37mp[37mal ===
+01:28:42.680 > [1[37m] - Cadastr[37ma[37mr usuário[37m
+[37m01:28:42.683 > [2] - Envia[37mr[37m mensagem
+[37m01:28:42.684 > [[37m3] - Ler m[37me[37mnsagens
+01:28:42.686 > [[37m8] - Ativar/[37mD[37mesativar W[37mi[37mFi
+01:28:42.689 > [9] - S[37mt[37matus do si[37ms[37mtema
+01:28:42.691 > [0] -[37m [37mSair
+01:28:42.692 > ====[37m=[37m===========[37m=[37m=
+01:28:42.694 > Opção[37m:[37m [37mR[37me[37mmetente: 
+[37m01:28:56.083 > D[37me[37mstinatá[37mr[37mio: 
+[37m01:28:56.612 > M[37me[37mnsagem: [37m[37m
+[37m01:29:03.242 > M[37me[37mnsagem envi[37ma[37mda com suc[37me[37msso!

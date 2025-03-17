@@ -1,0 +1,140 @@
+[37m01:06:39.762 > I[37mnici[37malização c[37mo[37mmpleta!
+01:06:39.765 > ==[37m=[37m==========[37m=[37m===========[37m=[37m=========
+[37m01:06:39.768 > [37m
+[37m01:06:42.110 > 
+[37m01:06:42.110 > =[37m== Menu P[37mr[37mincipal ==[37m=[37m
+01:06:42.112 > [1] - Cad[37ma[37mstrar usu[37mário
+01:06:42.114 > [2] - [37mEnviar mens[37ma[37mgem
+01:06:42.116 > [3] - [37mLer mensage[37mn[37ms
+01:06:42.118 > [8] - At[37mi[37mvar/Desati[37mv[37mar WiFi
+01:06:42.120 > [9[37m][37m - Status d[37mo[37m sistema
+[37m01:06:42.123 > [[37m0] - Sair[37m
+01:06:42.124 > ===========[37m=[37m======
+01:06:42.125 > Op[37m[37mção: [37m[[37mDI[37mS[37mPLAY] Muda[37mn[37mça de esta[37md[37mo: 0 → 1
+[37m01:10:14.986 > D[37migi[37mt[37me o nome do[37m [37musuário: [37m
+[37m01:10:20.502 > 
+[37m01:10:20.502 > C[37mhaves gerad[37ma[37ms para G:
+01:10:20.504 > C[37mhave Públi[37mc[37ma:
+01:10:20.506 > 	e = 21[37m | n = 2595[37m7[37m
+01:10:20.508 > Chave Pri[37mv[37mada:
+01:10:20.509 > 	p =[37m [37m101 | q = 2[37m5[37m7 | d = 243[37m8[37m1
+01:10:20.512 > 
+01:10:20.512 > IMPORT[37mA[37mNTE: Aprox[37mi[37mme a TAG RF[37mI[37mD para sal[37mv[37mar as chave[37ms privadas![37m[37m
+01:10:20.518 > [DISPLAY] [37mM[37mudança de[37m [37mestado: 1 [37m[37m→ 5
+[37m01:10:21.009 > [[37mD[37mISPLAY] [37mM[37mudança de [37me[37mstado: 5 [37m[37m→ 1
+01:10:21.013 > Aguarda[37mn[37mdo cartão[37m [37mRFID...
+[37m01:10:25.214 > C[37mart[37m[37mão detecta[37md[37mo!
+[37m01:10:25.242 > F[37ma[37mlha na l[37me[37mitura do ca[37mr[37mtão
+[37m01:10:25.252 > C[37mart[37m[37mão detectad[37mo[37m!
+[37m01:10:25.256 > U[37mID do[37m [37mcartão:  [37mC[37m7 77 F9 1B[37m
+[37m01:10:25.264 > C[37mh[37maves sa[37ml[37mvas com suc[37me[37msso!
+[37m01:10:30.174 > [[37mD[37mISPLAY] Mu[37md[37mança de e[37ms[37mtado: 0 →[37m [37m5
+[37m01:10:32.959 > [[37mDI[37mS[37mPLAY] Mudan[37m[37mça de esta[37md[37mo: 5 → 0
+[37m01:10:40.201 > 
+[37m01:10:40.201 > === M[37menu Princip[37ma[37ml ===
+01:10:40.202 > [1] [37m-[37m Cadastrar[37m [37musuário
+01:10:40.204 > [[37m2[37m] - Enviar[37m [37mmensagem
+01:10:40.207 > [[37m3[37m] - Ler me[37mn[37msagens
+01:10:40.209 > [8][37m - Ativar/D[37me[37msativar WiF[37mi[37m
+01:10:40.212 > [9] - St[37ma[37mtus do sist[37me[37mma
+01:10:40.214 > [0] - [37mSair
+01:10:40.215 > ======[37m=[37m===========[37m[37m
+01:10:40.217 > Opção: [37m[[37mDISP[37mL[37mAY] Mudança[37m [37mde estado[37m:[37m 0 → 5
+[37m01:10:43.894 > R[37me[37mmeten[37mt[37me: 
+[37m01:10:47.443 > D[37mestinatá[37mr[37mio: 
+[37m01:10:56.583 > U[37ms[37muário nã[37mo[37m encontrado[37m![37m
+[37m01:11:01.028 > [[37mD[37mISPLAY] Muda[37mn[37mça de est[37ma[37mdo: 5 → 0[37m
+[37m01:11:03.575 > 
+[37m01:11:03.576 > ==[37m= Menu Princ[37mi[37mpal ===
+01:11:03.578 > [1[37m] - Cadastr[37ma[37mr usuário[37m
+[37m01:11:03.581 > [2] - Envi[37ma[37mr mensagem[37m
+[37m01:11:03.583 > [3] - Ler [37mm[37mensagens
+01:11:03.584 > [[37m8[37m] - Ativar[37m/[37mDesativar W[37mi[37mFi
+01:11:03.587 > [9] - [37mS[37mtatus do si[37ms[37mtema
+01:11:03.589 > [0] [37m-[37m Sair
+01:11:03.590 > ====[37m=[37m==========[37m=[37m==
+01:11:03.591 > Opção[37m:[37m [37m[[37mDI[37mS[37mPLAY] Mudan[37m[37mça de esta[37md[37mo: 0 → 1[37m
+[37m01:11:10.256 > D[37migit[37me[37m o nome do u[37ms[37muário: [37m
+[37m01:11:18.149 > 
+[37m01:11:18.150 > Cha[37mv[37mes geradas[37m [37mpara G:
+01:11:18.152 > Cha[37mve Pública[37m:[37m
+01:11:18.154 > 	e = 23 |[37m n = 39913[37m
+[37m01:11:18.156 > Chave Priva[37md[37ma:
+01:11:18.157 > 	p = 1[37m6[37m7 | q = 239[37m [37m| d = 6871[37m[37m
+01:11:18.159 > 
+01:11:18.159 > IMPORTANT[37mE[37m: Aproxime[37m [37ma TAG RFID [37mp[37mara salvar[37m [37mas chaves p[37mr[37mivadas!
+01:11:18.164 > [[37mD[37mISPLAY] Mud[37ma[37mnça de es[37mt[37mado: 1 → [37m5[37m
+[37m01:11:18.657 > [[37mDISPLAY][37m [37mMudança de[37m [37mestado: 5 [37m[37m→ 1
+01:11:18.660 > Aguard[37ma[37mndo cartã[37mo[37m RFID...
+[37m01:11:21.133 > C[37ma[37mrtão detec[37mt[37mado!
+[37m01:11:21.137 > UI[37mD[37m do cartã[37mo[37m:  8B 58 65[37m [37m0A
+[37m01:11:21.145 > C[37mhave[37ms[37m salvas com[37m sucesso!
+[37m01:11:26.056 > [[37mDISPLAY] [37mM[37mudança de [37me[37mstado: 0 [37m[37m→ 5
+[37m01:11:28.840 > [[37mDISPLAY] Mud[37mança de esta[37md[37mo: 5 → [37m0
+[37m01:11:36.082 > 
+[37m01:11:36.083 > ===[37m [37mMenu Princ[37mi[37mpal ===
+01:11:36.085 > [1[37m] - Cadastra[37mr[37m usuário[37m
+[37m01:11:36.088 > [2] - Envia[37mr[37m mensagem[37m
+[37m01:11:36.090 > [3] - Ler m[37me[37mnsagens
+01:11:36.090 > [[37m8[37m] - Ativar/[37mD[37mesativar W[37mi[37mFi
+01:11:36.094 > [9] - S[37mtatus do si[37ms[37mtema
+01:11:36.095 > [0] -[37m [37mSair
+01:11:36.096 > ====[37m=[37m===========[37m=[37m=
+01:11:36.099 > Opção[37m: [37m[[37mD[37mISPLAY][37m [37mMudança d[37me[37m estado: 0 [37m[37m→ 5
+[37m01:11:53.474 > R[37me[37mmetente: [37m[37m
+[37m01:11:54.764 > D[37me[37mstinatário[37m:[37m 
+[37m01:11:55.394 > U[37ms[37muário nã[37mo[37m encontrado[37m![37m
+[37m01:11:59.838 > [[37mD[37mISPLAY] Mud[37ma[37mnça de est[37ma[37mdo: 5 → [37m0[37m
+[37m01:12:02.385 > 
+[37m01:12:02.386 > ==[37m=[37m Menu Prin[37mc[37mipal ===
+01:12:02.388 > [[37m1[37m] - Cadast[37mr[37mar usuário[37m[37m
+01:12:02.391 > [2] - Envi[37ma[37mr mensagem[37m[37m
+01:12:02.393 > [3] - Ler [37mmensagens
+[37m01:12:02.395 > [[37m8] - Ativar[37m/[37mDesativar [37mW[37miFi
+01:12:02.397 > [9] - [37mStatus do s[37mi[37mstema
+01:12:02.399 > [0] [37m-[37m Sair
+01:12:02.400 > ===[37m============[37m=[37m==
+01:12:02.402 > Opçã[37mo[37m: [37mO[37mpç[37m[37mão inválid[37ma[37m!
+01:12:06.656 > [DISPLA[37mY[37m] Mudança[37m [37mde estado: [37m0[37m → 5
+[37m01:12:10.928 > [[37mD[37mISPL[37mA[37mY] Mudança [37md[37me estado: [37m5[37m → 0
+[37m01:12:12.111 > 
+[37m01:12:12.111 > === Me[37mn[37mu Principa[37ml[37m ===
+01:12:12.113 > [1] -[37m [37mCadastrar u[37ms[37muário
+01:12:12.115 > [2[37m][37m - Enviar m[37me[37mnsagem
+01:12:12.117 > [3[37m][37m - Ler mens[37ma[37mgens
+01:12:12.120 > [8] [37m- Ativar/Des[37ma[37mtivar WiFi[37m[37m
+01:12:12.122 > [9] - Sta[37mt[37mus do siste[37mm[37ma
+01:12:12.125 > [0] - S[37mair
+01:12:12.125 > =======[37m=[37m==========[37m
+[37m01:12:12.128 > Opção: [37m[[37mD[37mISPL[37mA[37mY] Mudança[37m [37mde estado:[37m [37m0 → 2
+[37m01:12:49.038 > 
+[37m01:12:49.039 > D[37migite [37ms[37meu username[37m:[37m 
+[37m01:12:54.078 > N[37me[37mnhuma men[37ms[37magem encont[37mr[37mada.
+01:12:54.081 > [DISP[37mL[37mAY] Mudan[37mç[37ma de estado[37m:[37m 2 → 5
+[37m01:12:57.368 > [[37mD[37mISPLAY] Muda[37mn[37mça de es[37mt[37mado: 5 → [37m2[37m
+[37m01:12:57.665 > [[37mD[37mISPLAY] Mud[37ma[37mnça de est[37ma[37mdo: 2 → [37m0[37m
+[37m01:13:00.212 > 
+[37m01:13:00.213 > === Menu Prin[37mc[37mipal ===
+[37m01:13:00.215 > [1] - Cadast[37mr[37mar usuári[37mo[37m
+01:13:00.217 > [2] - Env[37mi[37mar mensage[37mm[37m
+01:13:00.219 > [3] - Ler[37m [37mmensagens
+[37m01:13:00.221 > [[37m8] - Ativa[37mr[37m/Desativar[37m [37mWiFi
+01:13:00.223 > [9] -[37m [37mStatus do [37ms[37mistema
+01:13:00.225 > [0][37m [37m- Sair
+01:13:00.226 > ===[37m=[37m==========[37m=[37m===
+01:13:00.228 > Opçã[37mo: [37m[[37mD[37mISPLAY] M[37mu[37mdança de e[37ms[37mtado: 0 [37m→[37m 5
+[37m01:13:28.917 > R[37me[37mmetente: 
+[37m01:13:30.438 > D[37me[37mstinatário:[37m [37m
+[37m01:13:31.057 > M[37men[37msagem: 
+[37m01:13:37.378 > M[37mensa[37mg[37mem enviada [37mc[37mom sucesso[37m![37m
+[37m01:13:41.821 > [[37mD[37mISPLA[37mY[37m] Mudança [37md[37me estado: [37m5[37m → 0
+[37m01:13:44.369 > 
+[37m01:13:44.369 > === Men[37mu[37m Principal[37m ===
+01:13:44.371 > [1] - [37mC[37madastrar u[37ms[37muário
+01:13:44.374 > [2][37m [37m- Enviar m[37me[37mnsagem
+01:13:44.376 > [3][37m [37m- Ler mens[37ma[37mgens
+01:13:44.378 > [8] -[37m Ativar/Des[37ma[37mtivar WiFi[37m
+[37m01:13:44.380 > [9] - Statu[37ms[37m do sistem[37ma[37m
+01:13:44.382 > [0] - Sai[37mr[37m
+01:13:44.383 > ========[37m=[37m=========
+[37m01:13:44.385 > Opção: 

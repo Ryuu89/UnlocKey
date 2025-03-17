@@ -1,0 +1,42 @@
+[37m00:23:09.060 > I[37mni[37mc[37mialização[37m [37mcompleta!
+[37m00:23:09.063 > =[37m==========[37m=[37m==========[37m=[37m===========[37m=[37m
+00:23:09.067 > 
+00:23:09.067 > 
+00:23:09.067 > === Me[37mnu Principal[37m [37m===
+00:23:09.068 > [1] -[37m [37mCadastrar u[37ms[37muário
+00:23:09.070 > [2][37m - Enviar m[37me[37mnsagem
+00:23:09.072 > [3][37m - Ler mens[37ma[37mgens
+00:23:09.074 > [8] -[37m [37mAtivar/Des[37ma[37mtivar WiFi[37m
+[37m00:23:09.077 > [9] - Stat[37mu[37ms do sistem[37ma[37m
+00:23:09.079 > [0] - Sa[37mir
+00:23:09.080 > ========[37m==========[37m
+[37m00:23:09.082 > Opção: [37m[[37mDISPLAY][37m [37mMudança d[37me[37m estado: 0 [37m[37m→ 1
+[37m00:23:37.788 > D[37migit[37me[37m o nome do[37m [37musuário: [37m
+[37m00:23:45.768 > 
+[37m00:23:45.768 > Chave[37ms[37m geradas p[37ma[37mra G:
+00:23:45.770 > Chave [37mP[37mública:[37m
+[37m00:23:45.773 > 	e = 23 | n[37m = 44117
+00:23:45.773 > C[37mh[37mave Privada[37m:[37m
+00:23:45.776 > 	p = 157[37m | q = 281 |[37m [37md = 28487[37m
+[37m00:23:45.779 > 
+00:23:45.779 > IMPORTANTE[37m: Aproxime [37ma[37m TAG RFID p[37ma[37mra salvar [37ma[37ms chaves pr[37mi[37mvadas!
+00:23:45.784 > [DI[37mSPLAY] Muda[37mn[37mça de esta[37md[37mo: 1 → 5[37m
+[37m00:23:46.276 > [[37mDISPL[37mA[37mY] Mudança[37m [37mde estado:[37m [37m5 → 1
+00:23:46.280 > Agu[37mardando car[37mt[37mão RFID..[37m.[37m
+[37m00:23:55.521 > C[37ma[37mrtão detec[37mt[37mado!
+[37m00:23:55.548 > F[37ma[37mlha na le[37mi[37mtura do [37mc[37martão
+[37m00:23:55.558 > C[37ma[37mrtão detect[37mado!
+[37m00:23:55.562 > U[37mID [37md[37mo cartão:[37m [37m C7 77 F9 1[37mB[37m
+[37m00:23:55.570 > C[37mh[37maves [37ms[37malvas com [37ms[37mucesso!
+[37m00:24:00.480 > [[37mD[37mISPLAY][37m [37mMudança de[37m [37mestado: 0 [37m[37m→ 5
+[37m00:24:03.264 > [[37mD[37mISPLAY] Mud[37ma[37mnça de es[37mt[37mado: 5 → [37m0[37m
+[37m00:24:03.464 > 
+[37m00:24:03.465 > =[37m== Menu Pri[37mn[37mcipal ===[37m
+[37m00:24:03.468 > [1] - Cadas[37mtrar usuár[37mi[37mo
+00:24:03.470 > [2] - En[37mviar mensag[37me[37mm
+00:24:03.472 > [3] - Le[37mr[37m mensagens[37m[37m
+00:24:03.474 > [8] - Ativ[37mar/Desativa[37mr[37m WiFi
+00:24:03.476 > [9] [37m- Status do [37ms[37mistema
+00:24:03.478 > [0[37m][37m - Sair
+00:24:03.479 > ==[37m=[37m==========[37m=[37m====
+00:24:03.481 > Opç[37mã[37mo: 
