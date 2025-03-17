@@ -97,6 +97,15 @@ void updateDisplayAsync() {
     static int lastSelectedOption = display.getSelectedOption();
     static bool stateJustChanged = false;
 
+    if (display.getState() == USER_LIST_SENDER || 
+        display.getState() == USER_LIST_RECIPIENT || 
+        display.getState() == ENCRYPTED_MESSAGES) {
+        // Just keep track of state but DON'T update screen
+        lastRenderedState = display.getState();
+        lastSelectedOption = display.getSelectedOption();
+        return; // Skip updates entirely while selecting users
+    }
+
     bool forceUpdate = false;
     
         // Check if important state has changed, requiring immediate update
@@ -253,12 +262,11 @@ int EncontraUsuario(Usuario *usuarios, int numUsuarios, const char *username) {
 
 void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int *numMensagens) {
     display.showUserList(usuarios, numUsuarios, "Enviar Mensagem");
-    display.update(true);
+
     Serial.println(F("Remetente: "));
     LimpaBufferSerial();
     while (!Serial.available()) {
         delay(50);
-        updateDisplayAsync(); // Keep display responsive
     }
     String remetente = LerString();
     
@@ -269,13 +277,11 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
     }
 
     display.showUserList(usuarios, numUsuarios, "Selecione Destinatario");
-    display.update(true);
-    delay(100);
+
     Serial.println(F("Digite o nome do destinatário: "));
     LimpaBufferSerial();
     while (!Serial.available()) {
         delay(50);
-        updateDisplayAsync(); // Keep display responsive
     }
     String destinatario = LerString();
     
@@ -313,6 +319,8 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
     (*numMensagens)++;
     Serial.println(F("Mensagem enviada com sucesso!"));
     display.showMessage("Mensagem enviada\ncom sucesso!", SUCCESS_DISPLAY_TIME);
+    display.setState(MENU_PRINCIPAL);
+    display.update(true);
 }
 
 void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens) {
@@ -322,7 +330,6 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
     LimpaBufferSerial();
     while (!Serial.available()) {
         delay(50);
-        updateDisplayAsync(); // Keep display responsive
     }
     String username = LerString();
     
@@ -358,14 +365,13 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
         return;
     }
     display.showEncryptedMessages(&usuarios[idUsuario], mensagens, numMensagens);
-    display.update(true);
+    //display.update(true);
     delay(100);
 
     Serial.println(F("\nDeseja descriptografar as mensagens? (1-Sim/0-Não)"));
     LimpaBufferSerial();
     while (!Serial.available()) {
         delay(10);
-        updateDisplayAsync();
     }
     // Lê o valor como string e converte para int
     String resposta = LerString();
@@ -464,7 +470,7 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
                 } else {
                     // Use regular display for shorter messages
                     display.showDecryptedMessages(mensagensDecriptadas.c_str());
-                    delay(15000); // Give time to read
+                    delay(8000); // Give time to read
                 }
             } else {
                 Serial.println(F("Nenhuma mensagem foi descriptografada com sucesso."));
@@ -655,11 +661,7 @@ void loop() {
               break;
               
           case 3:
-              display.setState(LER_MENSAGENS);
-              display.update(true);
               LerMensagens(usuarios, numUsuarios, mensagens, numMensagens);
-              display.setState(MENU_PRINCIPAL);
-              display.update(true);
               break;
 
           case 8:

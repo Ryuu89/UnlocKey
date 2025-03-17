@@ -200,6 +200,14 @@ void DisplayInterface::update(bool clearScreen) {
         case MENSAGEM_INFO:
             showInfoMessage();
             break;
+        case USER_LIST_VIEW:
+            break;
+        case USER_LIST_SENDER:
+            break;
+        case USER_LIST_RECIPIENT:
+            break;
+        case ENCRYPTED_MESSAGES:
+            break;
         default:
             break;
     }
@@ -337,7 +345,8 @@ void DisplayInterface::clearMessageBuffer() {
 }
 
 void DisplayInterface::showMessage(const char* message, unsigned long displayTime) {
-    UIState savedState = currentState;
+    UIState originalState = currentState;
+    
     tft->fillScreen(COLOR_BACKGROUND);
     clearMessageBuffer();
     appendMessage(message);
@@ -348,12 +357,23 @@ void DisplayInterface::showMessage(const char* message, unsigned long displayTim
     if (displayTime > 0) {
         delay(displayTime);
         tft->fillScreen(COLOR_BACKGROUND);
-        currentState = savedState;
+        
+        // Instead of just restoring state, check if we were sending a message
+        if (originalState == CADASTRAR_USUARIO || 
+            strcmp(message, "Mensagem enviada\ncom sucesso!") == 0) {
+            // For these specific cases, return to main menu
+            currentState = MENU_PRINCIPAL;
+        } else {
+            // Otherwise restore the original state
+            currentState = originalState;
+        }
+        
         update(true); // Force update with fresh redraw
     }
 }
 
 void DisplayInterface::showEncryptedMessages(Usuario* usuario, Mensagem* mensagens, int numMensagens) {
+    setState(ENCRYPTED_MESSAGES);
     tft->fillScreen(COLOR_BACKGROUND);
     drawTitle("Mensagens Criptografadas");
     
@@ -363,10 +383,8 @@ void DisplayInterface::showEncryptedMessages(Usuario* usuario, Mensagem* mensage
     tft->print("Usuario: ");
     tft->print(usuario->username);
     
+    // Count messages for this user
     int msgCount = 0;
-    int y = 65;
-    
-    // Count messages for this user first
     for (int i = 0; i < numMensagens; i++) {
         if (strcmp(mensagens[i].destinatario, usuario->username) == 0) {
             msgCount++;
@@ -377,46 +395,32 @@ void DisplayInterface::showEncryptedMessages(Usuario* usuario, Mensagem* mensage
         tft->setTextColor(COLOR_TEXT);
         tft->setCursor(10, 100);
         tft->println("Nenhuma mensagem encontrada");
-        
-        drawButton(110, 200, 100, 30, "Voltar", true);
         return;
     }
-
-    // List all encrypted messages for this user
+    
+    // Show encrypted messages
+    int y = 65;
     int displayedCount = 0;
-    for (int i = 0; i < numMensagens; i++) {
+    for (int i = 0; i < numMensagens && displayedCount < 5; i++) {
         if (strcmp(mensagens[i].destinatario, usuario->username) == 0) {
             tft->setTextColor(COLOR_TEXT);
             tft->setCursor(10, y);
             tft->print("De: ");
             tft->print(mensagens[i].remetente);
-            
-            // Format date more compactly
             tft->setCursor(10, y+15);
-            tft->setTextSize(1);
             tft->print("[");
             tft->print(mensagens[i].data);
             tft->print("]");
             
-            // Show a lock icon for encryption
-            tft->drawRect(280, y, 20, 20, COLOR_BORDER);
-            tft->fillRect(282, y+2, 16, 16, COLOR_BUTTON);
+            // Lock icon
+            tft->drawRect(280, y, 16, 16, COLOR_BORDER);
             
             y += 30;
             displayedCount++;
         }
     }
     
-    // Show count if there are more messages
-    if (msgCount > displayedCount) {
-        tft->setTextColor(COLOR_TEXT);
-        tft->setCursor(10, 190);
-        tft->print("+ ");
-        tft->print(msgCount - displayedCount);
-        tft->print(" mais mensagens");
-    }
-    
-    // Show decryption option
+    // Instructions for decryption
     tft->setTextColor(COLOR_HIGHLIGHT);
     tft->setCursor(10, 210);
     tft->println("Descriptografar? 1-Sim, 0-Nao");
@@ -555,6 +559,12 @@ void DisplayInterface::showUserRegistration() {
 }
 
 void DisplayInterface::showUserList(Usuario* usuarios, int numUsuarios, const char* title) {
+    if (strstr(title, "Destinatario")) {
+        setState(USER_LIST_RECIPIENT);
+    } else {
+        setState(USER_LIST_SENDER);
+    }
+    
     tft->fillScreen(COLOR_BACKGROUND);
     drawTitle(title);
     
@@ -578,11 +588,10 @@ void DisplayInterface::showUserList(Usuario* usuarios, int numUsuarios, const ch
         y += 20;
         displayedUsers++;
         
-        // Handle pagination if needed
         if (y > 200 && i < numUsuarios-1) {
             tft->setTextColor(COLOR_HIGHLIGHT);
             tft->setCursor(10, 220);
-            tft->print("...mais usuarios disponíveis");
+            tft->print("...mais usuarios");
             break;
         }
     }

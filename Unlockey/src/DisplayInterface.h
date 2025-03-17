@@ -42,7 +42,11 @@ enum UIState {
     STATUS_SISTEMA,
     MENSAGEM_INFO,
     TECLADO_VIRTUAL,
-    DESLIGAR_SISTEMA
+    DESLIGAR_SISTEMA,
+    USER_LIST_VIEW,
+    USER_LIST_SENDER,
+    USER_LIST_RECIPIENT,
+    ENCRYPTED_MESSAGES
 };
 
 // Optimize TextField structure to use less memory
