@@ -136,7 +136,7 @@ multiplicativo e potenciação modular.
 
 ## Resultado
 
-Vídeo com o resultado -> [Link]
+Vídeo com o resultado -> [[Link](https://www.youtube.com/watch?v=IrBOTmfxLJI&t=4s)]
 
 ## Autores
 
