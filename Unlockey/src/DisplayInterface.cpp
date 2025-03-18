@@ -58,7 +58,7 @@ void DisplayInterface::begin() {
     }
     
     // Inicializa display
-    tft->begin(2000000); // 2MHz para melhor estabilidade na primeira inicialização
+    tft->begin(24000000); // 2MHz para melhor estabilidade na primeira inicialização
     delay(50);
     
     // Define rotação (paisagem)
@@ -166,7 +166,9 @@ void DisplayInterface::update(bool clearScreen) {
     }
 
     if (clearScreen || currentState != lastDrawnState) {
+        tft->startWrite();
         tft->fillScreen(COLOR_BACKGROUND);
+        tft->endWrite();
     }
 
     lastDrawnState = currentState;
@@ -346,17 +348,66 @@ void DisplayInterface::clearMessageBuffer() {
 
 void DisplayInterface::showMessage(const char* message, unsigned long displayTime) {
     UIState originalState = currentState;
+    resetDisplay();
     
-    tft->fillScreen(COLOR_BACKGROUND);
-    clearMessageBuffer();
     appendMessage(message);
     currentState = MENSAGEM_INFO;
     
     showInfoMessage();
     
     if (displayTime > 0) {
-        delay(displayTime);
-        tft->fillScreen(COLOR_BACKGROUND);
+        // Draw progress bar near bottom of screen
+        const int barHeight = 16;  // Thicker bar to fit text inside
+        const int barWidth = tft->width() - 60;
+        const int barX = 30;
+        const int barY = 220;  // Position at bottom of screen
+        
+        // Draw frame for progress bar
+        tft->drawRect(barX-2, barY-2, barWidth+4, barHeight+4, COLOR_BORDER);
+        
+        // Fill background for bar
+        tft->fillRect(barX, barY, barWidth, barHeight, ILI9341_DARKGREY);
+        
+        // Show progress animation
+        for (int i = 0; i <= 10; i++) {
+            int fillWidth = (barWidth * i) / 10;
+            
+            // Select color based on message type
+            uint16_t fillColor = COLOR_HIGHLIGHT;
+            if (strstr(message, "sucesso") || strstr(message, "OK")) {
+                fillColor = ILI9341_GREEN;
+            } else if (strstr(message, "erro") || strstr(message, "falha")) {
+                fillColor = ILI9341_RED;
+            }
+            
+            // Add percentage text INSIDE the bar
+            char percentText[5];
+            sprintf(percentText, "%d%%", i*10);
+            
+            // Calculate center position for text
+            int textWidth = strlen(percentText) * 6;
+            int textX = barX + (barWidth - textWidth) / 2;
+            int textY = barY + (barHeight - 8) / 2; // Center vertically
+            
+            // Clear previous text area
+            if (i < 6){
+                tft->fillRect(textX-2, textY-1, textWidth+4, 10, ILI9341_DARKGREY);
+            }
+            
+            // Fill progress portion
+            tft->fillRect(barX, barY, fillWidth, barHeight, fillColor);
+
+            // Draw percentage text
+            tft->setTextColor(COLOR_BUTTON_TEXT); // White text for contrast
+            tft->setTextSize(1);
+            tft->setCursor(textX, textY);
+            tft->print(percentText);
+            
+            delay(displayTime/10);
+        }
+        
+        delay(200);
+        resetDisplay();
         
         // Instead of just restoring state, check if we were sending a message
         if (originalState == CADASTRAR_USUARIO || 
@@ -401,31 +452,51 @@ void DisplayInterface::showEncryptedMessages(Usuario* usuario, Mensagem* mensage
     // Show encrypted messages
     int y = 65;
     int displayedCount = 0;
-    for (int i = 0; i < numMensagens && displayedCount < 5; i++) {
+    for (int i = 0; i < numMensagens && displayedCount < 3; i++) {
         if (strcmp(mensagens[i].destinatario, usuario->username) == 0) {
+            // Show sender and date
             tft->setTextColor(COLOR_TEXT);
             tft->setCursor(10, y);
             tft->print("De: ");
             tft->print(mensagens[i].remetente);
-            tft->setCursor(10, y+15);
-            tft->print("[");
+            tft->print(" [");
             tft->print(mensagens[i].data);
             tft->print("]");
             
-            // Lock icon
-            tft->drawRect(280, y, 16, 16, COLOR_BORDER);
+            // Show encrypted content preview (up to 25 chars)
+            tft->setCursor(20, y+15);
+            tft->setTextColor(ILI9341_CYAN);
             
-            y += 30;
+            // Preview of encrypted content - limited to avoid overflow
+            int previewLen = min(40, (int)mensagens[i].tamanhoMsg);
+            for (int j = 0; j < previewLen; j++) {
+                tft->print((char)(mensagens[i].mensagemCriptografada[j] % 94 + 33));
+            }
+            if (mensagens[i].tamanhoMsg > previewLen) {
+                tft->print(" ...");
+            }
+            
+            // Lock icon
+            tft->drawBitmap(280, y, iconLock, 16, 16, COLOR_HIGHLIGHT);
+            
+            y += 45; // More space between messages
             displayedCount++;
         }
+    }
+    
+    // Show count if there are more messages
+    if (msgCount > displayedCount) {
+        tft->setTextColor(COLOR_TEXT);
+        tft->setCursor(10, 190);
+        tft->print("+ ");
+        tft->print(msgCount - displayedCount);
+        tft->print(" mais mensagens");
     }
     
     // Instructions for decryption
     tft->setTextColor(COLOR_HIGHLIGHT);
     tft->setCursor(10, 210);
     tft->println("Descriptografar? 1-Sim, 0-Nao");
-    
-    drawButton(110, 230, 100, 30, "Aguardando...", true);
 }
 
 void DisplayInterface::showInfoMessage() {
@@ -527,6 +598,7 @@ void DisplayInterface::showMessageDetailPaged(const char* message) {
     tft->fillScreen(COLOR_BACKGROUND);
     
     // Return to main menu
+    resetDisplay(); // Add this line
     setState(MENU_PRINCIPAL);
     update(true);
 }
@@ -724,6 +796,17 @@ void DisplayInterface::setDecryptMode(bool mode) {
     update();
 }
 
+void DisplayInterface::resetDisplay() {
+    // Clear message buffer completely
+    memset(messageBuffer, 0, sizeof(messageBuffer));
+    
+    // Clear screen
+    tft->fillScreen(COLOR_BACKGROUND);
+    
+    // Reset any other display state
+    lastActivityTime = millis();
+}
+
 void DisplayInterface::resetUserSelection() {
     selectedUser = -1;
     currentPage = 0;
@@ -739,11 +822,10 @@ bool DisplayInterface::showRFIDReadingStatus(bool success) {
 }
 
 void DisplayInterface::showDecryptedMessages(const char* messages) {
-    tft->fillScreen(COLOR_BACKGROUND);
-    clearMessageBuffer();
-    appendMessage(messages);
+    resetDisplay();
     setState(LER_MENSAGEM_DETALHE);
-    
+    appendMessage(messages);
+
     drawTitle("Mensagem Decriptada");
     
     tft->setTextColor(COLOR_TEXT);
@@ -751,7 +833,6 @@ void DisplayInterface::showDecryptedMessages(const char* messages) {
     tft->setCursor(10, 40);
     
     drawWrappedText(messageBuffer, 10, 40, tft->width() - 20, 15);
-
     drawButton(110, 220, 100, 30, "Voltar", true);
 }
 

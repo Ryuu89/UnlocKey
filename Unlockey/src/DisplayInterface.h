@@ -108,7 +108,7 @@ public:
     void showSystemStatus();
     void showInfoMessage();
     void showMessageDetail();
-    
+    void resetDisplay();
     void showMessageDetailPaged(const char* message);
     
     // Form methods

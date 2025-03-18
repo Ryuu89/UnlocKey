@@ -68,7 +68,7 @@ void SetDataAtual(char* data) {
 void resetSPIForDisplay() {
     // End current SPI configuration
     SPI.end();
-    delay(50);
+    delay(20);
     
     pinMode(MOSI_PIN, INPUT);
     pinMode(MISO_PIN, INPUT);
@@ -76,7 +76,7 @@ void resetSPIForDisplay() {
     pinMode(SS_PIN, INPUT);
     pinMode(TFT_CS, OUTPUT);
     digitalWrite(TFT_CS, HIGH); // Deselect display
-    delay(20);
+    delay(10);
 
     pinMode(MOSI_PIN, OUTPUT);
     pinMode(MISO_PIN, INPUT);
@@ -84,11 +84,11 @@ void resetSPIForDisplay() {
 
     // Restart SPI with display settings
     SPI.begin();
-    delay(50);
+    delay(20);
     
     // Reinitialize display
     display.begin();
-    delay(100);
+    delay(50);
 }
 
 void updateDisplayAsync() {
@@ -324,8 +324,9 @@ void EnviarMensagem(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int
 }
 
 void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int numMensagens) {
+    display.resetDisplay();
+    display.setState(LER_MENSAGENS);
     display.showReadMessages();
-    display.update(true);
     Serial.println(F("\nDigite seu username: "));
     LimpaBufferSerial();
     while (!Serial.available()) {
@@ -480,6 +481,7 @@ void LerMensagens(Usuario *usuarios, int numUsuarios, Mensagem *mensagens, int n
         }
         DeleteKeys(ChavePrivada, NULL);
         display.setDecryptMode(false);
+        display.resetDisplay();
         display.setState(MENU_PRINCIPAL);
         display.update(true);
     }
@@ -695,12 +697,12 @@ void loop() {
               
           case 0:
             {
-                Serial.println("Digite 0 para confirmar.");
-                display.showMessage("Digite 0 para confirmar\ndesligamento", 0);
+                Serial.println("Digite DESLIGAR para confirmar.");
+                display.showMessage("Digite DESLIGAR para confirmar\ndesligamento", 0);
                 String resposta = LerString();
-                int opc = resposta.toInt();
-  
-                if (opc == 0) {
+                resposta.trim();
+
+                if (resposta == "DESLIGAR") {
                   Serial.println(F("Limpando recursos..."));
                   display.showMessage("Limpando recursos...\nDesligando...", 0);
                   for (int i = 0; i < numUsuarios; i++) {
