@@ -2,3 +2,6 @@ AVISO!!
 
 Esta é a versão do Unlockey sem interface gráfica utilizando o display.
 Possui apenas o RFID e integração web
+VSCode -> Instale a extensão PlatformIO, e utilize as configurações já existentes em platformio.ini
+Arduino IDE -> Instale Board esp32 by espressif32, selecione DOIT ESP32 DEVKIT V1, instale as dependências e bibliotecas como MFRC522, ADAFRUIT GFX, etc, e por fim
+inclua os arquivos .h e .cpp na pasta do sketch, dê Upload File System nos arquivos HTML em Unlockey/data/.
